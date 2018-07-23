@@ -1,0 +1,4 @@
+/target/
+serde-fressian-wasm-api/target/
+**/*.rs.bk
+Cargo.lock

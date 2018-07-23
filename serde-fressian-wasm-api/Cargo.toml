@@ -1,0 +1,22 @@
+[package]
+name = "serde-fressian-wasm-api"
+version = "0.1.0"
+authors = ["Patrick Killean <pat.killean@gmail.com>"]
+description = "Exported WebAssembly API for the `serde-fressian` crate."
+license = "Apache-2.0/MIT"
+readme = "../README.md"
+repository = "https://github.com/pkpkpk/serde-fressian"
+
+[badges.travis-ci]
+repository = "pkpkpk/serde-fressian"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+serde-fressian = { version = "0.1.0", path = ".." }
+serde = "1.0.70"
+serde_derive = "1.0.70"
+
+[profile.release]
+opt-level = "s"
