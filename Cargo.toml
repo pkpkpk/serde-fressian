@@ -16,6 +16,7 @@ repository = "https://github.com/pkpkpk/serde-fressian"
 serde_json = "1.0" # https://github.com/rust-lang/cargo/issues/1982
 serde = "1.0.70"
 serde_derive = "1.0.70"
+serde_bytes = "0.10.4"
 itertools = "0.7.3"
 
 [dev-dependencies]

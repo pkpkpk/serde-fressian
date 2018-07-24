@@ -1,16 +1,16 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 #![allow(non_snake_case)]
+#![feature(custom_attribute)]
 
 
 #[macro_use]
 extern crate serde_derive;
-
 extern crate serde;
+extern crate serde_bytes;
+
 extern crate serde_fressian;
 
-use std::io;
-use std::env;
 use std::collections::HashMap;
 use serde::Serialize;
 
@@ -237,5 +237,24 @@ fn ints_test (){
     v.serialize(&mut FW).unwrap();
     assert_eq!(FW.get_ref(), &control);
 
+}
+
+#[test]
+fn bytes_test(){
+    let buf: Vec<u8>  = Vec::new();
+    let mut FW = Serializer::new(buf);
+
+    let v: Vec<u8> = vec![255,254,253,0,1,2,3];
+    let control: Vec<u8> = vec![215,255,254,253,0,1,2,3];
+    FW.write_bytes(&v, 0, v.len()).unwrap();
+    assert_eq!(FW.get_ref(), &control);
+
+    // can't override built in serialize impl for vec<u8>
+    // https://github.com/rust-lang/rust/issues/31844
+    // soln -> https://docs.serde.rs/serde_bytes/
+    let bb = serde_bytes::ByteBuf::from(v);
+    FW.reset();
+    bb.serialize(&mut FW).unwrap();
+    assert_eq!(FW.get_ref(), &control);
 }
 
