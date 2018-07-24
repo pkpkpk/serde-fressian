@@ -20,7 +20,6 @@ use serde::Serialize;
 use serde_fressian::ser::{to_vec, Serializer};
 
 fn main() {
-    // let js_MAX_SAFE_INTEGER: f64 = 9007199254740991.0;
 
     let env_args: Vec<String> = env::args().collect();
     let args: Vec<Value> = serde_json::from_str(&env_args[1]).unwrap();
@@ -32,25 +31,24 @@ fn main() {
     }
 
     let buf = Vec::with_capacity(10);
-    let mut serializer = Serializer::new(buf);
-    // value.serialize(&mut serializer)?;
+    let mut FW = Serializer::new(buf);
 
     for obj in args {
         match obj {
             Value::Null => {
-                serializer.write_null().unwrap()
+                FW.write_null().unwrap()
             },
 
             Value::Bool(b) => {
-                 serializer.write_boolean(b).unwrap()
+                 FW.write_boolean(b).unwrap()
             },
 
             Value::Number(n) => {
                 let f = n.as_f64().unwrap();
                 if f == f.round() {
-                    serializer.write_int(f as i64).unwrap();
+                    FW.write_int(f as i64).unwrap();
                 } else {
-                    serializer.write_double(f).unwrap();
+                    FW.write_double(f).unwrap();
                 }
             },
 
@@ -59,7 +57,7 @@ fn main() {
                 match o.tag.as_ref() {
                     "bytes" => {
                         let bytes: Vec<u8> = serde_json::from_value(o.value).unwrap();
-                        serializer.write_bytes(&bytes, 0, bytes.len()).unwrap();
+                        FW.write_bytes(&bytes, 0, bytes.len()).unwrap();
                     }
                     "utf8" => {
                         let s: String = serde_json::from_value(o.value).unwrap();
@@ -67,9 +65,8 @@ fn main() {
                     }
                     "vec" => {
                         let v: Vec<serde_json::Value> = serde_json::from_value(o.value).unwrap();
-                        // FW.write_object(&v).unwrap();
                         println!("vec: {:?}", &v);
-                        v.serialize(&mut serializer).unwrap()
+                        v.serialize(&mut FW).unwrap()
                     }
                     _ => {
                         println!("unmatched TaggedObject {}", o.tag);
@@ -79,8 +76,8 @@ fn main() {
             },
 
             Value::String(s) => {
-                // serializer.write_string(&s).unwrap();
-                s.serialize(&mut serializer).unwrap()
+                // FW.write_string(&s).unwrap();
+                s.serialize(&mut FW).unwrap()
             }
 
             _ => {
@@ -90,13 +87,11 @@ fn main() {
         }
     };
 
-    serializer.write_footer();
+    FW.write_footer().unwrap();
 
     let mut output_map = HashMap::new();
-    // output_map.insert("bytesWritten", json!(FW.get_bytes_written()));
-    output_map.insert("bytesWritten", json!(serializer.get_bytes_written()));
-    // output_map.insert("bytes", json!(FW.get_ref()));
-    output_map.insert("bytes", json!(serializer.get_ref()));
+    output_map.insert("bytesWritten", json!(FW.get_bytes_written()));
+    output_map.insert("bytes", json!(FW.get_ref()));
 
     let json = serde_json::to_string(&output_map).expect("Failed to convert HashMap into JSON");
 
