@@ -244,6 +244,7 @@ fn bytes_test(){
     let buf: Vec<u8>  = Vec::new();
     let mut FW = Serializer::new(buf);
 
+    // packed count
     let v: Vec<u8> = vec![255,254,253,0,1,2,3];
     let control: Vec<u8> = vec![215,255,254,253,0,1,2,3];
     FW.write_bytes(&v, 0, v.len()).unwrap();
@@ -256,5 +257,13 @@ fn bytes_test(){
     FW.reset();
     bb.serialize(&mut FW).unwrap();
     assert_eq!(FW.get_ref(), &control);
+
+    FW.reset();
+    // unpacked length
+    let v: Vec<u8> = vec![252,253,254,255,0,1,2,3,4];
+    let control: Vec<u8> = vec![217, 9, 252, 253, 254, 255, 0, 1, 2, 3, 4];
+    FW.write_bytes(&v, 0, v.len()).unwrap();
+    assert_eq!(FW.get_ref(), &control);
+
 }
 

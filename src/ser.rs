@@ -282,6 +282,7 @@ impl Serializer{
                 length -= ranges::BYTE_CHUNK_SIZE;
             };
             self.write_code(Codes::BYTES)?;
+            self.write_count(length)?;
             self.rawOut.write_raw_bytes(bytes, offset, length)
         }
     }
