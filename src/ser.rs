@@ -79,7 +79,7 @@ impl Serializer{
     pub fn write_footer(&mut self) -> Result<()> {
         let length = self.get_bytes_written();
         // self.clear_caches()
-        self.rawOut.writeRawInt32(Codes::FOOTER_MAGIC)?;
+        self.rawOut.writeRawInt32(Codes::FOOTER_MAGIC as i32)?;
         self.rawOut.writeRawInt32(length as i32)?; //////////////////////////////
         let checksum = 0; //rawOut.getChecksum().getValue()
         self.rawOut.writeRawInt32(checksum)
