@@ -93,6 +93,10 @@ impl Serializer{
         &self.rawOut.get_ref()
     }
 
+    pub fn reset(&mut self) {
+        self.rawOut.reset();
+    }
+
     ////////////////////////////////////////////////////////////////////////////
 
     fn write_code(&mut self, code: u8) -> Result<()> {
