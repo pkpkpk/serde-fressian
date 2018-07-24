@@ -220,7 +220,7 @@ fn ints_test (){
     let buf: Vec<u8>  = Vec::new();
     let mut FW = Serializer::new(buf);
     FW.write_int(v as i64).unwrap();
-    assert_eq!(FW.get_ref(), &control );
+    assert_eq!(FW.get_ref(), &control);
     FW.reset();
     v.serialize(&mut FW).unwrap();
     assert_eq!(FW.get_ref(), &control);
@@ -238,6 +238,4 @@ fn ints_test (){
     assert_eq!(FW.get_ref(), &control);
 
 }
-
-
 
