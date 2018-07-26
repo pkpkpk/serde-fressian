@@ -202,68 +202,73 @@ impl Serializer{
 
     pub fn write_string(&mut self, s: &str) -> Result<()> {
         let CHAR_LENGTH: usize = s.chars().count();
-        // chars > 0xFFFF are actually 2 chars in java, need a separate string length
-        // to write the appropriate code into the bytes
-        let mut JCHAR_LENGTH = CHAR_LENGTH;
-        let mut string_pos: usize = 0;
-        let mut jstring_pos: usize = 0;
-        let mut iter = itertools::put_back(s.chars());
 
-        // let maxBufNeeded: usize = cmp::min(65536, CHAR_LENGTH * 3);
-        // ^ silently fails, should be using char count. compiler bug?
-        let maxBufNeeded: usize = cmp::min(65536, s.len() * 3);
-        let mut buffer: Vec<u8> = Vec::with_capacity(maxBufNeeded); //abstract out into stringbuffer, re-use
+        if CHAR_LENGTH == 0 {
+            self.rawOut.write_raw_byte(Codes::STRING_PACKED_LENGTH_START);
+        } else {
+            // chars > 0xFFFF are actually 2 chars in java, need a separate string length
+            // to write the appropriate code into the bytes
+            let mut JCHAR_LENGTH = CHAR_LENGTH;
+            let mut string_pos: usize = 0;
+            let mut jstring_pos: usize = 0;
+            let mut iter = itertools::put_back(s.chars());
 
-        while string_pos < CHAR_LENGTH {
-            let mut buf_pos = 0;
-            loop {
+            // let maxBufNeeded: usize = cmp::min(65536, CHAR_LENGTH * 3);
+            // ^ silently fails, should be using char count. compiler bug?
+            let maxBufNeeded: usize = cmp::min(65536, s.len() * 3);
+            let mut buffer: Vec<u8> = Vec::with_capacity(maxBufNeeded); //abstract out into stringbuffer, re-use
 
-                let ch: Option<char> = iter.next();
+            while string_pos < CHAR_LENGTH {
+                let mut buf_pos = 0;
+                loop {
 
-                match ch {
-                    Some(ch) => {
-                        let encodingSize = encoding_size(ch as u32);
+                    let ch: Option<char> = iter.next();
 
-                        if (buf_pos + encodingSize) < maxBufNeeded {
-                            if 0xFFFF < ch as u32 {
-                                // must emulate java chars:
-                                // supplementary characters are represented as a pair of char values
-                                //  - the high-surrogates range, (\uD800-\uDBFF)
-                                //  - the low-surrogates range (\uDC00-\uDFFF)
-                                let mut utf16_bytes: Vec<u16> =  vec![0; 2];
-                                ch.encode_utf16(&mut utf16_bytes);
-                                write_char(utf16_bytes[0] as u32, &mut buffer, &mut buf_pos);
-                                write_char(utf16_bytes[1] as u32, &mut buffer, &mut buf_pos);
-                                string_pos += 1; //a 1 rust char...
-                                jstring_pos += 2; // equivalent to eating 2 java chars
-                                JCHAR_LENGTH += 1; // track extra java char we created
-                                continue;
+                    match ch {
+                        Some(ch) => {
+                            let encodingSize = encoding_size(ch as u32);
+
+                            if (buf_pos + encodingSize) < maxBufNeeded {
+                                if 0xFFFF < ch as u32 {
+                                    // must emulate java chars:
+                                    // supplementary characters are represented as a pair of char values
+                                    //  - the high-surrogates range, (\uD800-\uDBFF)
+                                    //  - the low-surrogates range (\uDC00-\uDFFF)
+                                    let mut utf16_bytes: Vec<u16> =  vec![0; 2];
+                                    ch.encode_utf16(&mut utf16_bytes);
+                                    write_char(utf16_bytes[0] as u32, &mut buffer, &mut buf_pos);
+                                    write_char(utf16_bytes[1] as u32, &mut buffer, &mut buf_pos);
+                                    string_pos += 1; //a 1 rust char...
+                                    jstring_pos += 2; // equivalent to eating 2 java chars
+                                    JCHAR_LENGTH += 1; // track extra java char we created
+                                    continue;
+                                } else {
+                                    write_char(ch as u32, &mut buffer, &mut buf_pos);
+                                    string_pos += 1;
+                                    jstring_pos += 1;
+                                    continue;
+                                }
                             } else {
-                                write_char(ch as u32, &mut buffer, &mut buf_pos);
-                                string_pos += 1;
-                                jstring_pos += 1;
-                                continue;
+                                iter.put_back(ch);
+                                break;
                             }
-                        } else {
-                            iter.put_back(ch);
-                            break;
                         }
+                        None  => { break }
                     }
-                    None  => break
                 }
+                if buf_pos < ranges::STRING_PACKED_LENGTH_END {
+                    self.rawOut.write_raw_byte(Codes::STRING_PACKED_LENGTH_START.wrapping_add( buf_pos as u8))?;
+                } else if jstring_pos == JCHAR_LENGTH {
+                    self.write_code(Codes::STRING)?;
+                    self.write_count(buf_pos)?;
+                } else {
+                    self.write_code(Codes::STRING_CHUNK)?;
+                    self.write_count(buf_pos)?;
+                }
+                self.rawOut.write_raw_bytes(&buffer,0,buf_pos)?;
             }
-
-            if buf_pos < ranges::STRING_PACKED_LENGTH_END {
-                self.rawOut.write_raw_byte(Codes::STRING_PACKED_LENGTH_START.wrapping_add( buf_pos as u8))?;
-            } else if jstring_pos == JCHAR_LENGTH {
-                self.write_code(Codes::STRING)?;
-                self.write_count(buf_pos)?;
-            } else {
-                self.write_code(Codes::STRING_CHUNK)?;
-                self.write_count(buf_pos)?;
-            }
-            self.rawOut.write_raw_bytes(&buffer,0,buf_pos)?;
         }
+
         Ok(())
     }
 
@@ -362,6 +367,7 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     }
 
     fn serialize_str(self, v: &str) -> Result<()> {
+        println!("serializing string::{}",v);
         self.write_string(&v.to_string())
     }
 
