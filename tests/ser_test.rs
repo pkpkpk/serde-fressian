@@ -71,7 +71,6 @@ fn test_ser_max_f64 (){
     let v: f64 = 1.7976931348623157E308;
     let control: Vec<u8> = vec![250, 127, 239, 255, 255, 255, 255, 255, 255 ];
     FW.write_double(v).unwrap();
-
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
     v.serialize(&mut FW).unwrap();
@@ -80,13 +79,10 @@ fn test_ser_max_f64 (){
 
 #[test]
 fn ints_test (){
-
+    let mut FW = Serializer::new(Vec::new());
     //Short/MIN_VALUE
     let v: i16 = -32768;
     let control: Vec<u8> = vec![103, 128, 0];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -96,9 +92,7 @@ fn ints_test (){
     //Short/MAX_VALUE
     let v: i16 = 32767;
     let control: Vec<u8> = vec![104, 127, 255];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -108,9 +102,7 @@ fn ints_test (){
     //Integer/MIN_VALUE
     let v: i32 = -2147483648;
     let control: Vec<u8> = vec![117, 128, 0, 0, 0];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -120,9 +112,7 @@ fn ints_test (){
     //Integer/MAX_VALUE
     let v: i32 = 2147483647;
     let control: Vec<u8> = vec![118, 127, 255, 255, 255];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -132,9 +122,7 @@ fn ints_test (){
     // min i40
     let v: i64 = -549755813887;
     let control: Vec<u8> = vec![121, 128, 0, 0, 0, 1];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -144,9 +132,7 @@ fn ints_test (){
     // max i40
     let v: i64 = 549755813888;
     let control: Vec<u8> = vec![122, 128, 0, 0, 0, 0];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -156,9 +142,7 @@ fn ints_test (){
     // max i48
     let v: i64 = 140737490000000;
     let control: Vec<u8> = vec![126, 128, 0, 0, 25, 24, 128];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -168,9 +152,7 @@ fn ints_test (){
     // JS_MAX_SAFE_INT
     let v: i64 = 9007199254740991;
     let control: Vec<u8> = vec![248, 0, 31, 255, 255, 255, 255, 255, 255];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -180,9 +162,7 @@ fn ints_test (){
     // JS_MAX_SAFE_INT++
     let v: i64 = 9007199254740992;
     let control: Vec<u8> = vec![248, 0, 32, 0, 0, 0, 0, 0, 0];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -192,9 +172,7 @@ fn ints_test (){
     // JS_MIN_SAFE_INT
     let v: i64 = -9007199254740991;
     let control: Vec<u8> = vec![248, 255, 224, 0, 0, 0, 0, 0, 1];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -204,9 +182,7 @@ fn ints_test (){
     // JS_MIN_SAFE_INT--
     let v: i64 = -9007199254740992;
     let control: Vec<u8> = vec![248, 255, 224, 0, 0, 0, 0, 0, 0];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -216,9 +192,7 @@ fn ints_test (){
     // long max (i64)
     let v: i64 = 9223372036854775807;
     let control: Vec<u8> = vec![248, 127, 255, 255, 255, 255, 255, 255, 255];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control);
     FW.reset();
@@ -228,9 +202,7 @@ fn ints_test (){
     // long min (i64)
     let v: i64 = -9223372036854775808;
     let control: Vec<u8> = vec![248, 128, 0, 0, 0, 0, 0, 0, 0];
-
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    FW.reset();
     FW.write_int(v as i64).unwrap();
     assert_eq!(FW.get_ref(), &control );
     FW.reset();
@@ -241,8 +213,7 @@ fn ints_test (){
 
 #[test]
 fn bytes_test(){
-    let buf: Vec<u8>  = Vec::new();
-    let mut FW = Serializer::new(buf);
+    let mut FW = Serializer::new(Vec::new());
 
     // packed count
     let v: Vec<u8> = vec![255,254,253,0,1,2,3];
@@ -263,6 +234,40 @@ fn bytes_test(){
     let v: Vec<u8> = vec![252,253,254,255,0,1,2,3,4];
     let control: Vec<u8> = vec![217, 9, 252, 253, 254, 255, 0, 1, 2, 3, 4];
     FW.write_bytes(&v, 0, v.len()).unwrap();
+    assert_eq!(FW.get_ref(), &control);
+
+}
+
+#[test]
+fn string_test(){
+    let mut FW = Serializer::new(Vec::new());
+
+    let v = "".to_string();
+    let control: Vec<u8> = vec![218];
+    FW.write_string(&v).unwrap();
+    assert_eq!(FW.get_ref(), &control);
+    FW.reset();
+    &v.serialize(&mut FW);
+    assert_eq!(FW.get_ref(), &control);
+
+    FW.reset();
+
+    let v = "hola".to_string();
+    let control: Vec<u8> = vec![222,104,111,108,97];
+    FW.write_string(&v).unwrap();
+    assert_eq!(FW.get_ref(), &control);
+    FW.reset();
+    &v.serialize(&mut FW);
+    assert_eq!(FW.get_ref(), &control);
+
+    FW.reset();
+
+    let v = "é❤️ßℝ東京東京😉 😎 🤔 😐 🙄".to_string();
+    let control: Vec<u8> = vec![227,60,101,204,129,226,157,164,239,184,143,195,159,226,132,157,230,157,177,228,186,172,230,157,177,228,186,172,237,160,189,237,184,137,32,237,160,189,237,184,142,32,237,160,190,237,180,148,32,237,160,189,237,184,144,32,237,160,189,237,185,132];
+    FW.write_string(&v).unwrap();
+    assert_eq!(FW.get_ref(), &control);
+    FW.reset();
+    &v.serialize(&mut FW);
     assert_eq!(FW.get_ref(), &control);
 
 }

@@ -367,7 +367,6 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     }
 
     fn serialize_str(self, v: &str) -> Result<()> {
-        println!("serializing string::{}",v);
         self.write_string(&v.to_string())
     }
 
