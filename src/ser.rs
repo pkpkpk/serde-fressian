@@ -111,20 +111,6 @@ impl Serializer{
         self.write_code(Codes::NULL)
     }
 
-    pub fn begin_open_list(&mut self) -> Result<()> {
-        // if (0 != rawOut.getBytesWritten())
-        //     throw new IllegalStateException("openList must be called from the top level, outside any footer context.");
-        self.write_code(Codes::BEGIN_OPEN_LIST)
-    }
-
-    pub fn begin_closed_list(&mut self) -> Result<()> {
-        self.write_code(Codes::BEGIN_CLOSED_LIST)
-    }
-
-    pub fn end_list(&mut self) -> Result<()> {
-        self.write_code(Codes::END_COLLECTION)
-    }
-
     pub fn write_boolean(&mut self, b: bool) -> Result<()> {
         if b {
             self.write_code(Codes::TRUE)
@@ -132,7 +118,6 @@ impl Serializer{
             self.write_code(Codes::FALSE)
         }
     }
-
 
     pub fn write_float(&mut self, f: f32) -> Result<()> {
         self.write_code(Codes::FLOAT)?;
@@ -289,6 +274,55 @@ impl Serializer{
             self.write_code(Codes::BYTES)?;
             self.write_count(length)?;
             self.rawOut.write_raw_bytes(bytes, offset, length)
+        }
+    }
+
+    pub fn begin_open_list(&mut self) -> Result<()> {
+        // if (0 != rawOut.getBytesWritten())
+        //     throw new IllegalStateException("openList must be called from the top level, outside any footer context.");
+        self.write_code(Codes::BEGIN_OPEN_LIST)
+    }
+
+    pub fn begin_closed_list(&mut self) -> Result<()> {
+        self.write_code(Codes::BEGIN_CLOSED_LIST)
+    }
+
+    pub fn end_list(&mut self) -> Result<()> {
+        self.write_code(Codes::END_COLLECTION)
+    }
+
+    pub fn write_list_header(&mut self, length: usize) -> Result<()>{
+        if (length as u8) < ranges::LIST_PACKED_LENGTH_END {
+            self.rawOut.write_raw_byte(Codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))
+        } else {
+            self.write_code(Codes::LIST)?;
+            self.write_count(length)
+        }
+    }
+
+    pub fn write_list<I>(&mut self, iter: I) -> Result<()>
+    where
+        I: IntoIterator,
+        <I as IntoIterator>::Item: Serialize,
+    {
+        let iter = iter.into_iter();
+        let len: Option<usize> = iter.len_hint();
+        match len {
+            Some(length) => {
+                self.write_list_header(length)?;
+                for item in iter {
+                    item.serialize(&mut *self)?;
+                }
+                Ok(())
+            }
+            None => {
+                self.begin_closed_list()?;
+                for item in iter {
+                    item.serialize(&mut *self)?;
+                }
+                self.end_list()?;
+                Ok(())
+            }
         }
     }
 }
@@ -449,14 +483,18 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     }
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
-        let length = _len.unwrap();
-        if (length as u8) < ranges::LIST_PACKED_LENGTH_END {
-            self.rawOut.write_raw_byte(Codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))?;
-        } else{
-            self.write_code(Codes::LIST)?;
-            self.write_count(length)?;
+        match _len {
+            Some(n) => {
+                self.write_list_header(n)?;
+                Ok(self)
+            }
+            None => {
+                Err(serde::de::Error::custom(
+                    "cannot use serde::ser::serialize on uncounted sequences at this time.
+                     If known to be finite use serializer.write_list().
+                     If indet, use begin_open_list & end_list manually."))
+            }
         }
-        Ok(self)
     }
 
     // Tuples look just like sequences in JSON. Some formats may be able to
@@ -660,4 +698,45 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
     }
 
     fn end(self) -> Result<()> { Ok(()) }
+}
+
+//////////////////////////////////////////////////////
+// from serde/src/ser/mod.rs
+trait LenHint: Iterator {
+    fn len_hint(&self) -> Option<usize>;
+}
+
+impl<I> LenHint for I
+where
+    I: Iterator,
+{
+    #[cfg(not(feature = "unstable"))]
+    fn len_hint(&self) -> Option<usize> {
+        iterator_len_hint(self)
+    }
+
+    #[cfg(feature = "unstable")]
+    default fn len_hint(&self) -> Option<usize> {
+        iterator_len_hint(self)
+    }
+}
+
+#[cfg(feature = "unstable")]
+impl<I> LenHint for I
+where
+    I: ExactSizeIterator,
+{
+    fn len_hint(&self) -> Option<usize> {
+        Some(self.len())
+    }
+}
+
+fn iterator_len_hint<I>(iter: &I) -> Option<usize>
+where
+    I: Iterator,
+{
+    match iter.size_hint() {
+        (lo, Some(hi)) if lo == hi => Some(lo),
+        _ => None,
+    }
 }

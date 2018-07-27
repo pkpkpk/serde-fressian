@@ -272,3 +272,40 @@ fn string_test(){
 
 }
 
+#[test]
+fn list_test(){
+    let mut FW = Serializer::new(Vec::new());
+
+    let v: Vec<i64> = vec![-2, -1, 0, 1, 2];
+    let control: Vec<u8> = vec![233,79,254,255,0,1,2];
+    FW.write_list(&v).unwrap();
+    assert_eq!(FW.get_ref(), &control);
+    FW.reset();
+    &v.serialize(&mut FW);
+    assert_eq!(FW.get_ref(), &control);
+
+    FW.reset();
+
+    let v: Vec<String> = vec!["i".to_string(), "am".to_string(), "a".to_string(), "reasonable".to_string(), "man".to_string(), "get".to_string(), "off".to_string(), "my".to_string(), "case".to_string()];
+    let control: Vec<u8> = vec![236,9,219,105,220,97,109,219,97,227,10,114,101,97,115,111,110,97,98,108,101,221,109,97,110,221,103,101,116,221,111,102,102,220,109,121,222,99,97,115,101];
+    FW.write_list(&v).unwrap();
+    assert_eq!(FW.get_ref(), &control);
+    FW.reset();
+    &v.serialize(&mut FW);
+    assert_eq!(FW.get_ref(), &control);
+
+    let sub_v0: Vec<String> = vec!["some".to_string()];
+    let sub_v1: Vec<String> = vec!["nested".to_string()];
+    let sub_v2: Vec<String> = vec!["shit".to_string()];
+    let v: Vec<Vec<String>> = vec![sub_v0, sub_v1, sub_v2];
+    let control: Vec<u8> = vec![231,229,222,115,111,109,101,229,224,110,101,115,116,101,100,229,222,115,104,105,116];
+
+    let mut FW = Serializer::new(Vec::new());
+    FW.write_list(&v).unwrap();
+    assert_eq!(FW.get_ref(), &control);
+
+    let mut FW = Serializer::new(Vec::new());
+    &v.serialize(&mut FW);
+    assert_eq!(FW.get_ref(), &control);
+}
+
