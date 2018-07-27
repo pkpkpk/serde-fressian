@@ -86,15 +86,21 @@ impl Serializer{
         // self.reset();
     }
 
-    pub fn into_inner(self) -> Vec<u8> { self.rawOut.into_inner() }
+    pub fn into_inner(self) -> Vec<u8> {
+        self.rawOut.into_inner()
+    }
 
-    /// Get ref to out
+    // Get ref to outs buffer, including bytes past bytes written
     pub fn get_ref(&self) -> &Vec<u8> {
         &self.rawOut.get_ref()
     }
 
     pub fn reset(&mut self) {
-        self.rawOut.reset();
+        self.rawOut.reset()
+    }
+
+    pub fn to_vec(&mut self) -> Vec<u8> {
+        self.rawOut.to_vec()
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -189,7 +195,7 @@ impl Serializer{
         let CHAR_LENGTH: usize = s.chars().count();
 
         if CHAR_LENGTH == 0 {
-            self.rawOut.write_raw_byte(Codes::STRING_PACKED_LENGTH_START);
+            self.rawOut.write_raw_byte(Codes::STRING_PACKED_LENGTH_START)?;
         } else {
             // chars > 0xFFFF are actually 2 chars in java, need a separate string length
             // to write the appropriate code into the bytes
@@ -326,20 +332,6 @@ impl Serializer{
         }
     }
 }
-
-pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
-where
-    T: Serialize,
-{
-    let buf = Vec::with_capacity(100);
-    let mut serializer = Serializer {
-        rawOut: RawOutput::new(buf)
-    };
-
-    value.serialize(&mut serializer)?;
-    Ok(serializer.rawOut.into_inner())
-}
-
 
 impl<'a> ser::Serializer for &'a mut Serializer{
     type Ok = ();
@@ -570,18 +562,9 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     }
 }
 
-
-// The following 7 impls deal with the serialization of compound types like
-// sequences and maps. Serialization of such types is begun by a Serializer
-// method and followed by zero or more calls to serialize individual elements of
-// the compound type and one call to end the compound type.
-//
-// This impl is SerializeSeq so these methods are called after `serialize_seq`
-// is called on the Serializer.
+// called after `serialize_seq` is called on the Serializer.
 impl<'a> ser::SerializeSeq for &'a mut Serializer {
-    // Must match the `Ok` type of the serializer.
     type Ok = ();
-    // Must match the `Error` type of the serializer.
     type Error = Error;
 
     // Serialize a single element of the sequence.
@@ -591,11 +574,9 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
         value.serialize(&mut **self)
     }
 
-    // Close the sequence.
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-// Same thing but for tuples.
 impl<'a> ser::SerializeTuple for &'a mut Serializer {
     type Ok = ();
     type Error = Error;
@@ -609,7 +590,6 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer {
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-// Same thing but for tuple structs.
 impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
     type Ok = ();
     type Error = Error;
@@ -699,6 +679,27 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
 
     fn end(self) -> Result<()> { Ok(()) }
 }
+
+//////////////////////////////////////////////////////
+
+
+
+// write a value to bytes, skipping writer creation
+pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
+where
+    T: Serialize,
+{
+    let buf = Vec::with_capacity(100);
+    let mut serializer = Serializer {
+        rawOut: RawOutput::new(buf)
+    };
+
+    value.serialize(&mut serializer)?;
+    Ok(serializer.rawOut.into_inner())
+}
+
+
+
 
 //////////////////////////////////////////////////////
 // from serde/src/ser/mod.rs

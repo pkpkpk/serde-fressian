@@ -70,6 +70,7 @@ impl IWriteBytes for Vec<u8> {
 pub struct RawOutput {
     out: Vec<u8>,
     bytesWritten: u64
+    //cache: Option<Vec<u8>>
     // checksum: Adler32
 }
 
@@ -81,7 +82,18 @@ impl RawOutput {
          }
     }
 
-    /// Consumes this cursor, returning the underlying value.
+    // TODO: cache + invalidate on writes
+    pub fn to_vec(&mut self) -> Vec<u8> {
+        if self.bytesWritten == 0 {
+            Vec::new()
+        } else {
+            let mut v: Vec<u8> = Vec::with_capacity(self.bytesWritten as usize);
+            v.extend_from_slice(&self.out[0..self.bytesWritten as usize]);
+            return v;
+        }
+    }
+
+    /// returning the underlying bytevec, including any bytes past bytesWritten
     pub fn into_inner(self) -> Vec<u8> { self.out }
 
     /// Gets a reference to the underlying value
