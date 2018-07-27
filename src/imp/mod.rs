@@ -1,3 +1,3 @@
-pub mod Codes;
+pub mod codes;
 pub mod ranges;
 pub mod RawOutput;

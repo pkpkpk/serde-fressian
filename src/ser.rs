@@ -2,7 +2,7 @@ extern crate serde;
 
 use serde::ser::{self, Serialize};
 use imp::RawOutput::*;
-use imp::Codes;
+use imp::codes;
 use imp::ranges;
 use std::cmp;
 
@@ -73,16 +73,16 @@ impl Serializer{
     }
 
     pub fn get_bytes_written(&self) -> u64 {
-        self.rawOut.getBytesWritten()
+        self.rawOut.get_bytes_written()
     }
 
     pub fn write_footer(&mut self) -> Result<()> {
         let length = self.get_bytes_written();
         // self.clear_caches()
-        self.rawOut.writeRawInt32(Codes::FOOTER_MAGIC as i32)?;
-        self.rawOut.writeRawInt32(length as i32)?; //////////////////////////////
+        self.rawOut.write_raw_i32(codes::FOOTER_MAGIC as i32)?;
+        self.rawOut.write_raw_i32(length as i32)?; //////////////////////////////
         let checksum = 0; //rawOut.getChecksum().getValue()
-        self.rawOut.writeRawInt32(checksum)
+        self.rawOut.write_raw_i32(checksum)
         // self.reset();
     }
 
@@ -114,73 +114,73 @@ impl Serializer{
     }
 
     pub fn write_null(&mut self) -> Result<()> {
-        self.write_code(Codes::NULL)
+        self.write_code(codes::NULL)
     }
 
     pub fn write_boolean(&mut self, b: bool) -> Result<()> {
         if b {
-            self.write_code(Codes::TRUE)
+            self.write_code(codes::TRUE)
         } else {
-            self.write_code(Codes::FALSE)
+            self.write_code(codes::FALSE)
         }
     }
 
     pub fn write_float(&mut self, f: f32) -> Result<()> {
-        self.write_code(Codes::FLOAT)?;
-        self.rawOut.writeRawFloat(f)
+        self.write_code(codes::FLOAT)?;
+        self.rawOut.write_raw_float(f)
     }
 
     pub fn write_double(&mut self, f: f64) -> Result<()> {
         if f == 0.0 {
-            self.write_code(Codes::DOUBLE_0)
+            self.write_code(codes::DOUBLE_0)
         } else if f == 1.0 {
-            self.write_code(Codes::DOUBLE_1)
+            self.write_code(codes::DOUBLE_1)
         } else {
-            self.write_code(Codes::DOUBLE)?;
-            self.rawOut.writeRawDouble(f)
+            self.write_code(codes::DOUBLE)?;
+            self.rawOut.write_raw_double(f)
         }
     }
 
     pub fn write_int(&mut self, i: i64) -> Result<()> {
         match bit_switch(i) {
             1..=14 => {
-                self.write_code(Codes::INT)?;
-                self.rawOut.writeRawInt64(i)
+                self.write_code(codes::INT)?;
+                self.rawOut.write_raw_i64(i)
             }
 
             15..=22 => {
-                self.rawOut.write_raw_byte(Codes::INT_PACKED_7_ZERO.wrapping_add( (i >> 48) as u8 ))?;
-                self.rawOut.writeRawInt48(i)
+                self.rawOut.write_raw_byte(codes::INT_PACKED_7_ZERO.wrapping_add( (i >> 48) as u8 ))?;
+                self.rawOut.write_raw_i48(i)
             }
 
             23..=30 => {
-                self.rawOut.write_raw_byte(Codes::INT_PACKED_6_ZERO.wrapping_add( (i >> 40) as u8 ))?;
-                self.rawOut.writeRawInt40(i)
+                self.rawOut.write_raw_byte(codes::INT_PACKED_6_ZERO.wrapping_add( (i >> 40) as u8 ))?;
+                self.rawOut.write_raw_i40(i)
             }
 
             31..=38 => {
-                self.rawOut.write_raw_byte(Codes::INT_PACKED_5_ZERO.wrapping_add( (i >> 32) as u8 ))?;
-                self.rawOut.writeRawInt32(i as i32)
+                self.rawOut.write_raw_byte(codes::INT_PACKED_5_ZERO.wrapping_add( (i >> 32) as u8 ))?;
+                self.rawOut.write_raw_i32(i as i32)
             }
 
             39..=44 => {
-                self.rawOut.write_raw_byte(Codes::INT_PACKED_4_ZERO.wrapping_add( (i >> 24) as u8))?;
-                self.rawOut.writeRawInt24(i as i32)
+                self.rawOut.write_raw_byte(codes::INT_PACKED_4_ZERO.wrapping_add( (i >> 24) as u8))?;
+                self.rawOut.write_raw_i24(i as i32)
             }
 
             45..=51 => {
-                self.rawOut.write_raw_byte(Codes::INT_PACKED_3_ZERO.wrapping_add( (i >> 16) as u8))?;
-                self.rawOut.writeRawInt16(i as i32)
+                self.rawOut.write_raw_byte(codes::INT_PACKED_3_ZERO.wrapping_add( (i >> 16) as u8))?;
+                self.rawOut.write_raw_i16(i as i32)
             }
 
             52..=57 => {
-                self.rawOut.write_raw_byte(Codes::INT_PACKED_2_ZERO.wrapping_add( (i >> 8) as u8))?;
+                self.rawOut.write_raw_byte(codes::INT_PACKED_2_ZERO.wrapping_add( (i >> 8) as u8))?;
                 self.rawOut.write_raw_byte(i as u8)
             }
 
             58..=64 => {
                 if i < -1 {
-                    self.rawOut.write_raw_byte(Codes::INT_PACKED_2_ZERO.wrapping_add( (i >> 8) as u8))?;
+                    self.rawOut.write_raw_byte(codes::INT_PACKED_2_ZERO.wrapping_add( (i >> 8) as u8))?;
                     self.rawOut.write_raw_byte(i as u8)
                 } else {
                     self.rawOut.write_raw_byte(i as u8)
@@ -192,24 +192,24 @@ impl Serializer{
     }
 
     pub fn write_string(&mut self, s: &str) -> Result<()> {
-        let CHAR_LENGTH: usize = s.chars().count();
+        let char_length: usize = s.chars().count();
 
-        if CHAR_LENGTH == 0 {
-            self.rawOut.write_raw_byte(Codes::STRING_PACKED_LENGTH_START)?;
+        if char_length == 0 {
+            self.rawOut.write_raw_byte(codes::STRING_PACKED_LENGTH_START)?;
         } else {
             // chars > 0xFFFF are actually 2 chars in java, need a separate string length
             // to write the appropriate code into the bytes
-            let mut JCHAR_LENGTH = CHAR_LENGTH;
+            let mut j_char_length = char_length;
             let mut string_pos: usize = 0;
-            let mut jstring_pos: usize = 0;
+            let mut j_string_pos: usize = 0;
             let mut iter = itertools::put_back(s.chars());
 
             // let maxBufNeeded: usize = cmp::min(65536, CHAR_LENGTH * 3);
             // ^ silently fails, should be using char count. compiler bug?
-            let maxBufNeeded: usize = cmp::min(65536, s.len() * 3);
-            let mut buffer: Vec<u8> = Vec::with_capacity(maxBufNeeded); //abstract out into stringbuffer, re-use
+            let max_buf_needed: usize = cmp::min(65536, s.len() * 3);
+            let mut buffer: Vec<u8> = Vec::with_capacity(max_buf_needed); //abstract out into stringbuffer, re-use
 
-            while string_pos < CHAR_LENGTH {
+            while string_pos < char_length {
                 let mut buf_pos = 0;
                 loop {
 
@@ -217,9 +217,9 @@ impl Serializer{
 
                     match ch {
                         Some(ch) => {
-                            let encodingSize = encoding_size(ch as u32);
+                            let enc_size = encoding_size(ch as u32);
 
-                            if (buf_pos + encodingSize) < maxBufNeeded {
+                            if (buf_pos + enc_size) < max_buf_needed {
                                 if 0xFFFF < ch as u32 {
                                     // must emulate java chars:
                                     // supplementary characters are represented as a pair of char values
@@ -230,13 +230,13 @@ impl Serializer{
                                     write_char(utf16_bytes[0] as u32, &mut buffer, &mut buf_pos);
                                     write_char(utf16_bytes[1] as u32, &mut buffer, &mut buf_pos);
                                     string_pos += 1; //a 1 rust char...
-                                    jstring_pos += 2; // equivalent to eating 2 java chars
-                                    JCHAR_LENGTH += 1; // track extra java char we created
+                                    j_string_pos += 2; // equivalent to eating 2 java chars
+                                    j_char_length += 1; // track extra java char we created
                                     continue;
                                 } else {
                                     write_char(ch as u32, &mut buffer, &mut buf_pos);
                                     string_pos += 1;
-                                    jstring_pos += 1;
+                                    j_string_pos += 1;
                                     continue;
                                 }
                             } else {
@@ -248,12 +248,12 @@ impl Serializer{
                     }
                 }
                 if buf_pos < ranges::STRING_PACKED_LENGTH_END {
-                    self.rawOut.write_raw_byte(Codes::STRING_PACKED_LENGTH_START.wrapping_add( buf_pos as u8))?;
-                } else if jstring_pos == JCHAR_LENGTH {
-                    self.write_code(Codes::STRING)?;
+                    self.rawOut.write_raw_byte(codes::STRING_PACKED_LENGTH_START.wrapping_add( buf_pos as u8))?;
+                } else if j_string_pos == j_char_length {
+                    self.write_code(codes::STRING)?;
                     self.write_count(buf_pos)?;
                 } else {
-                    self.write_code(Codes::STRING_CHUNK)?;
+                    self.write_code(codes::STRING_CHUNK)?;
                     self.write_count(buf_pos)?;
                 }
                 self.rawOut.write_raw_bytes(&buffer,0,buf_pos)?;
@@ -265,43 +265,43 @@ impl Serializer{
 
     pub fn write_bytes(&mut self, bytes: &Vec<u8>, offset: usize, length: usize) -> Result<()> {
         if length < ranges::BYTES_PACKED_LENGTH_END {
-            self.rawOut.write_raw_byte(Codes::BYTES_PACKED_LENGTH_START + length as u8)?;
+            self.rawOut.write_raw_byte(codes::BYTES_PACKED_LENGTH_START + length as u8)?;
             self.rawOut.write_raw_bytes(bytes, offset,length)
         } else {
             let mut length = length;
             let mut offset = offset;
             while ranges::BYTE_CHUNK_SIZE < length {
-                self.write_code(Codes::BYTES_CHUNK)?;
+                self.write_code(codes::BYTES_CHUNK)?;
                 self.write_count(ranges::BYTE_CHUNK_SIZE)?;
                 self.rawOut.write_raw_bytes(bytes, offset, ranges::BYTE_CHUNK_SIZE)?;
                 offset += ranges::BYTE_CHUNK_SIZE;
                 length -= ranges::BYTE_CHUNK_SIZE;
             };
-            self.write_code(Codes::BYTES)?;
+            self.write_code(codes::BYTES)?;
             self.write_count(length)?;
             self.rawOut.write_raw_bytes(bytes, offset, length)
         }
     }
 
     pub fn begin_open_list(&mut self) -> Result<()> {
-        // if (0 != rawOut.getBytesWritten())
+        // if (0 != rawOut.get_bytes_written())
         //     throw new IllegalStateException("openList must be called from the top level, outside any footer context.");
-        self.write_code(Codes::BEGIN_OPEN_LIST)
+        self.write_code(codes::BEGIN_OPEN_LIST)
     }
 
     pub fn begin_closed_list(&mut self) -> Result<()> {
-        self.write_code(Codes::BEGIN_CLOSED_LIST)
+        self.write_code(codes::BEGIN_CLOSED_LIST)
     }
 
     pub fn end_list(&mut self) -> Result<()> {
-        self.write_code(Codes::END_COLLECTION)
+        self.write_code(codes::END_COLLECTION)
     }
 
     pub fn write_list_header(&mut self, length: usize) -> Result<()>{
         if (length as u8) < ranges::LIST_PACKED_LENGTH_END {
-            self.rawOut.write_raw_byte(Codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))
+            self.rawOut.write_raw_byte(codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))
         } else {
-            self.write_code(Codes::LIST)?;
+            self.write_code(codes::LIST)?;
             self.write_count(length)
         }
     }
@@ -524,12 +524,12 @@ impl<'a> ser::Serializer for &'a mut Serializer{
 
     // Maps are represented in JSON as `{ K: V, K: V, ... }`.
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        self.write_code(Codes::MAP)?;
+        self.write_code(codes::MAP)?;
         let length = 2 * _len.unwrap();
         if (length as u8) < ranges::LIST_PACKED_LENGTH_END {
-            self.rawOut.write_raw_byte(Codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))?;
+            self.rawOut.write_raw_byte(codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))?;
         } else{
-            self.write_code(Codes::LIST)?;
+            self.write_code(codes::LIST)?;
             self.write_count(length)?;
         }
         Ok(self)

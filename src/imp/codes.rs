@@ -1,6 +1,4 @@
 
-// mod codes;
-
 pub const PRIORITY_CACHE_PACKED_START: u8 = 0x80;
 pub const PRIORITY_CACHE_PACKED_END: u8 = 0xA0;
 pub const STRUCT_CACHE_PACKED_START: u8 = 0xA0;

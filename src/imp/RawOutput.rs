@@ -11,17 +11,17 @@ use self::error::{Error, Result};
 use std::cmp;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-fn vec_write_byte(vec: &mut Vec<u8>, bytesWritten: u64, byte: u8) -> Result<()> {
-    let bytesWritten = bytesWritten as usize;
-    if bytesWritten == 0 {
+fn vec_write_byte(vec: &mut Vec<u8>, bytes_written: u64, byte: u8) -> Result<()> {
+    let bytes_written = bytes_written as usize;
+    if bytes_written == 0 {
         if vec.len() == 0 {
             vec.push(byte);
         } else {
             vec[0] = byte;
         }
     } else {
-        if bytesWritten < vec.len() {
-            vec[bytesWritten] = byte;
+        if bytes_written < vec.len() {
+            vec[bytes_written] = byte;
         } else {
             vec.push(byte);
         }
@@ -51,16 +51,16 @@ fn vec_write_bytes(vec: &mut Vec<u8>, pos: u64, buf: &[u8]) -> Result<()> {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub trait IWriteBytes {
-    fn writeRawByte(&mut self, bytesWritten: u64, byte: u8) -> Result<()>;
+    fn write_raw_byte(&mut self, bytes_written: u64, byte: u8) -> Result<()>;
 
-    fn writeRawBytes(&mut self, pos: u64, bytes: &Vec<u8>, off: usize, len: usize) -> Result<()>;
+    fn write_raw_bytes(&mut self, pos: u64, bytes: &Vec<u8>, off: usize, len: usize) -> Result<()>;
 }
 
 impl IWriteBytes for Vec<u8> {
-    fn writeRawByte(&mut self, bytesWritten: u64, byte: u8) -> Result<()> { //abstract out as IWriteBytes?
-        vec_write_byte(self, bytesWritten, byte)
+    fn write_raw_byte(&mut self, bytes_written: u64, byte: u8) -> Result<()> { //abstract out as IWriteBytes?
+        vec_write_byte(self, bytes_written, byte)
     }
-    fn writeRawBytes(&mut self, pos: u64, bytes: &Vec<u8>, off: usize, len: usize) -> Result<()> {
+    fn write_raw_bytes(&mut self, pos: u64, bytes: &Vec<u8>, off: usize, len: usize) -> Result<()> {
         let buf = &bytes[off as usize .. (off + len) as usize];
         vec_write_bytes(self, pos, buf)
     }
@@ -69,7 +69,7 @@ impl IWriteBytes for Vec<u8> {
 
 pub struct RawOutput {
     out: Vec<u8>,
-    bytesWritten: u64
+    bytes_written: u64
     //cache: Option<Vec<u8>>
     // checksum: Adler32
 }
@@ -77,23 +77,23 @@ pub struct RawOutput {
 impl RawOutput {
     pub fn new(out: Vec<u8>) -> RawOutput {
          RawOutput{
-             bytesWritten: 0,
+             bytes_written: 0,
              out: out
          }
     }
 
     // TODO: cache + invalidate on writes
     pub fn to_vec(&mut self) -> Vec<u8> {
-        if self.bytesWritten == 0 {
+        if self.bytes_written == 0 {
             Vec::new()
         } else {
-            let mut v: Vec<u8> = Vec::with_capacity(self.bytesWritten as usize);
-            v.extend_from_slice(&self.out[0..self.bytesWritten as usize]);
+            let mut v: Vec<u8> = Vec::with_capacity(self.bytes_written as usize);
+            v.extend_from_slice(&self.out[0..self.bytes_written as usize]);
             return v;
         }
     }
 
-    /// returning the underlying bytevec, including any bytes past bytesWritten
+    /// returning the underlying bytevec, including any bytes past bytes_written
     pub fn into_inner(self) -> Vec<u8> { self.out }
 
     /// Gets a reference to the underlying value
@@ -102,15 +102,17 @@ impl RawOutput {
     /// Gets a mutable reference to the underlying value
     pub fn get_mut(&mut self) -> &mut Vec<u8> { &mut self.out }
 
-    pub fn getBytesWritten(&self) -> u64 { self.bytesWritten }
+    pub fn get_bytes_written(&self) -> u64 {
+        self.bytes_written
+    }
 
-    fn notifyBytesWritten(&mut self, count: u64) {
-        self.bytesWritten += count;
+    fn notify_bytes_written(&mut self, count: u64) {
+        self.bytes_written += count;
     }
 
     pub fn reset(&mut self){
         // self.checksum.reset();
-        self.bytesWritten = 0;
+        self.bytes_written = 0;
     }
 
     // pub fn getChecksum(&self){
@@ -118,70 +120,70 @@ impl RawOutput {
     // }
 
     pub fn write_raw_byte(&mut self, byte: u8) -> Result<()>{
-        self.out.writeRawByte(self.bytesWritten, byte)?;
-        self.notifyBytesWritten(1);
+        self.out.write_raw_byte(self.bytes_written, byte)?;
+        self.notify_bytes_written(1);
         Ok(())
     }
 
     pub fn write_raw_bytes(&mut self, bytes: &Vec<u8>, off: usize, len: usize) -> Result<()> {
-        self.out.writeRawBytes(self.bytesWritten, bytes, off, len)?;
-        self.notifyBytesWritten(len as u64);
+        self.out.write_raw_bytes(self.bytes_written, bytes, off, len)?;
+        self.notify_bytes_written(len as u64);
         Ok(())
     }
 
-    pub fn writeRawInt16(&mut self, i: i32) -> Result<()>{
+    pub fn write_raw_i16(&mut self, i: i32) -> Result<()>{
         self.write_raw_byte(((i >>  8) & 0xFF) as u8)?;
         self.write_raw_byte(        (i & 0xFF) as u8)
     }
 
-    pub fn writeRawInt24(&mut self, i: i32) -> Result<()>{
-        self.write_raw_byte(((i >> 16) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >>  8) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(        (i & 0xFF) as u8)))
+    pub fn write_raw_i24(&mut self, i: i32) -> Result<()>{
+        self.write_raw_byte(((i >> 16) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >>  8) & 0xFF) as u8)?;
+        self.write_raw_byte(        (i & 0xFF) as u8)
     }
 
-    pub fn writeRawInt32(&mut self, i: i32) -> Result<()> {
-        self.write_raw_byte(((i >> 24) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >> 16) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >>  8) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(        (i & 0xFF) as u8))))
+    pub fn write_raw_i32(&mut self, i: i32) -> Result<()> {
+        self.write_raw_byte(((i >> 24) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >> 16) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >>  8) & 0xFF) as u8)?;
+        self.write_raw_byte(        (i & 0xFF) as u8)
     }
 
     /// requires exceeding_bitshifts
-    pub fn writeRawInt40(&mut self, i: i64) -> Result<()> {
-        self.write_raw_byte(((i >> 32) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >> 24) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >> 16) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >>  8) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(        (i & 0xFF) as u8)))))
+    pub fn write_raw_i40(&mut self, i: i64) -> Result<()> {
+        self.write_raw_byte(((i >> 32) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >> 24) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >> 16) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >>  8) & 0xFF) as u8)?;
+        self.write_raw_byte(        (i & 0xFF) as u8)
     }
 
-    pub fn writeRawInt48(&mut self, i: i64) -> Result<()> {
-        self.write_raw_byte(((i >> 40) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >> 32) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >> 24) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >> 16) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(((i >>  8) & 0xFF) as u8).and_then(|_|
-        self.write_raw_byte(        (i & 0xFF) as u8))))))
+    pub fn write_raw_i48(&mut self, i: i64) -> Result<()> {
+        self.write_raw_byte(((i >> 40) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >> 32) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >> 24) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >> 16) & 0xFF) as u8)?;
+        self.write_raw_byte(((i >>  8) & 0xFF) as u8)?;
+        self.write_raw_byte(        (i & 0xFF) as u8)
     }
 
-    pub fn writeRawInt64(&mut self, i: i64) -> Result<()> {
-        self.write_raw_byte((i >> 56) as u8).and_then(|_|
-        self.write_raw_byte((i >> 48) as u8).and_then(|_|
-        self.write_raw_byte((i >> 40) as u8).and_then(|_|
-        self.write_raw_byte((i >> 32) as u8).and_then(|_|
-        self.write_raw_byte((i >> 24) as u8).and_then(|_|
-        self.write_raw_byte((i >> 16) as u8).and_then(|_|
-        self.write_raw_byte((i >>  8) as u8).and_then(|_|
-        self.write_raw_byte((i >>  0) as u8))))))))
+    pub fn write_raw_i64(&mut self, i: i64) -> Result<()> {
+        self.write_raw_byte((i >> 56) as u8)?;
+        self.write_raw_byte((i >> 48) as u8)?;
+        self.write_raw_byte((i >> 40) as u8)?;
+        self.write_raw_byte((i >> 32) as u8)?;
+        self.write_raw_byte((i >> 24) as u8)?;
+        self.write_raw_byte((i >> 16) as u8)?;
+        self.write_raw_byte((i >>  8) as u8)?;
+        self.write_raw_byte((i >>  0) as u8)
     }
 
-    pub fn writeRawFloat(&mut self, f: f32) -> Result<()> {
-        self.writeRawInt32(f.to_bits() as i32)
+    pub fn write_raw_float(&mut self, f: f32) -> Result<()> {
+        self.write_raw_i32(f.to_bits() as i32)
     }
 
-    pub fn writeRawDouble(&mut self, f: f64) -> Result<()> {
-        self.writeRawInt64(f.to_bits() as i64)
+    pub fn write_raw_double(&mut self, f: f64) -> Result<()> {
+        self.write_raw_i64(f.to_bits() as i64)
     }
 }
 
