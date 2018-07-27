@@ -191,6 +191,7 @@ impl Serializer{
         }
     }
 
+    #[cfg(not(raw_UTF8))]
     pub fn write_string(&mut self, s: &str) -> Result<()> {
         let char_length: usize = s.chars().count();
 
@@ -261,6 +262,15 @@ impl Serializer{
         }
 
         Ok(())
+    }
+
+    #[cfg(raw_UTF8)]
+    pub fn write_string(&mut self, s: &str) -> Result<()> {
+        let bytes = s.as_bytes();
+        let length = bytes.len();
+        self.write_code(codes::UTF8)?;
+        self.write_count(length)?;
+        self.rawOut.write_raw_bytes(&bytes.to_vec(), 0, length)
     }
 
     pub fn write_bytes(&mut self, bytes: &Vec<u8>, offset: usize, length: usize) -> Result<()> {

@@ -288,7 +288,10 @@ fn string_test(){
     let mut fw = Serializer::new(Vec::new());
 
     let v = "".to_string();
+    #[cfg(not(raw_UTF8))]
     let control: Vec<u8> = vec![218];
+    #[cfg(raw_UTF8)]
+    let control: Vec<u8> = vec![191,0];
     fw.write_string(&v).unwrap();
     let buf = fw.to_vec();
     assert_eq!(&buf, &control);
@@ -300,7 +303,10 @@ fn string_test(){
     fw.reset();
 
     let v = "hola".to_string();
+    #[cfg(not(raw_UTF8))]
     let control: Vec<u8> = vec![222,104,111,108,97];
+    #[cfg(raw_UTF8)]
+    let control: Vec<u8> = vec![191,4,104,111,108,97];
     fw.write_string(&v).unwrap();
     let buf = fw.to_vec();
     assert_eq!(&buf, &control);
@@ -310,9 +316,11 @@ fn string_test(){
     assert_eq!(&buf, &control);
 
     fw.reset();
-
     let v = "é❤️ßℝ東京東京😉 😎 🤔 😐 🙄".to_string();
+    #[cfg(not(raw_UTF8))]
     let control: Vec<u8> = vec![227,60,101,204,129,226,157,164,239,184,143,195,159,226,132,157,230,157,177,228,186,172,230,157,177,228,186,172,237,160,189,237,184,137,32,237,160,189,237,184,142,32,237,160,190,237,180,148,32,237,160,189,237,184,144,32,237,160,189,237,185,132];
+    #[cfg(raw_UTF8)]
+    let control: Vec<u8> = vec![191,50,101,204,129,226,157,164,239,184,143,195,159,226,132,157,230,157,177,228,186,172,230,157,177,228,186,172,240,159,152,137,32,240,159,152,142,32,240,159,164,148,32,240,159,152,144,32,240,159,153,132];
     fw.write_string(&v).unwrap();
     let buf = fw.to_vec();
     assert_eq!(&buf, &control);
@@ -340,7 +348,11 @@ fn list_test(){
     fw.reset();
 
     let v: Vec<String> = vec!["i".to_string(), "am".to_string(), "a".to_string(), "reasonable".to_string(), "man".to_string(), "get".to_string(), "off".to_string(), "my".to_string(), "case".to_string()];
+    #[cfg(not(raw_UTF8))]
     let control: Vec<u8> = vec![236,9,219,105,220,97,109,219,97,227,10,114,101,97,115,111,110,97,98,108,101,221,109,97,110,221,103,101,116,221,111,102,102,220,109,121,222,99,97,115,101];
+    #[cfg(raw_UTF8)]
+    let control: Vec<u8> = vec![236,9,191,1,105,191,2,97,109,191,1,97,191,10,114,101,97,115,111,110,97,98,108,101,191,3,109,97,110,191,3,103,101,116,191,3,111,102,102,191,2,109,121,191,4,99,97,115,101];
+
     fw.write_list(&v).unwrap();
     let buf = fw.to_vec();
     assert_eq!(&buf, &control);
@@ -355,8 +367,10 @@ fn list_test(){
     let sub_v1: Vec<String> = vec!["nested".to_string()];
     let sub_v2: Vec<String> = vec!["shit".to_string()];
     let v: Vec<Vec<String>> = vec![sub_v0, sub_v1, sub_v2];
+    #[cfg(not(raw_UTF8))]
     let control: Vec<u8> = vec![231,229,222,115,111,109,101,229,224,110,101,115,116,101,100,229,222,115,104,105,116];
-
+    #[cfg(raw_UTF8)]
+    let control: Vec<u8> = vec![231,229,191,4,115,111,109,101,229,191,6,110,101,115,116,101,100,229,191,4,115,104,105,116];
     fw.write_list(&v).unwrap();
     let buf = fw.to_vec();
     assert_eq!(&buf, &control);
