@@ -341,6 +341,47 @@ impl Serializer{
             }
         }
     }
+
+    pub fn write_map<K,V,I>(&mut self, iter:I) -> Result<()>
+    where K: Serialize,
+          V: Serialize,
+          I: IntoIterator<Item = (K,V)>,
+    {
+        let iter = iter.into_iter();
+        let len: Option<usize> = iter.len_hint();
+        match len {
+            Some(l) => {
+                let length = l * 2;
+                self.write_code(codes::MAP)?;
+                self.write_list_header(length)?;
+                for (k,v) in iter {
+                    k.serialize(&mut *self)?;
+                    v.serialize(&mut *self)?;
+                }
+                Ok(())
+            }
+            None => {
+                self.write_code(codes::MAP)?;
+                self.begin_closed_list()?;
+                for (k,v) in iter {
+                    k.serialize(&mut *self)?;
+                    v.serialize(&mut *self)?;
+                }
+                self.end_list()?;
+                Ok(())
+            }
+        }
+    }
+
+    pub fn write_set<I, V>(&mut self, iter: I) -> Result<()>
+    where V: Serialize + std::cmp::Eq + std::hash::Hash,
+          I: IntoIterator<Item = V>,
+    {
+        self.write_code(codes::SET)?;
+        self.write_list(iter)
+    }
+
+
 }
 
 impl<'a> ser::Serializer for &'a mut Serializer{
@@ -359,15 +400,15 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     }
 
     fn serialize_i8(self, v: i8) -> Result<()> {
-        self.serialize_i64(i64::from(v))
+        self.write_int(i64::from(v))
     }
 
     fn serialize_i16(self, v: i16) -> Result<()> {
-        self.serialize_i64(i64::from(v))
+        self.write_int(i64::from(v))
     }
 
     fn serialize_i32(self, v: i32) -> Result<()> {
-        self.serialize_i64(i64::from(v))
+        self.write_int(i64::from(v))
     }
 
     fn serialize_i64(self, v: i64) -> Result<()> {
@@ -375,15 +416,15 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     }
 
     fn serialize_u8(self, v: u8) -> Result<()> {
-        self.serialize_u64(u64::from(v))
+        self.write_int(i64::from(v))
     }
 
     fn serialize_u16(self, v: u16) -> Result<()> {
-        self.serialize_u64(u64::from(v))
+        self.write_int(i64::from(v))
     }
 
     fn serialize_u32(self, v: u32) -> Result<()> {
-        self.serialize_i64(i64::from(v))
+        self.write_int(i64::from(v))
     }
 
     fn serialize_u64(self, v: u64) -> Result<()> {/////////////////////////////////////////////////
@@ -412,12 +453,9 @@ impl<'a> ser::Serializer for &'a mut Serializer{
 
     // An absent optional is represented as the JSON `null`.
     fn serialize_none(self) -> Result<()> {
-        self.serialize_unit()
+        self.write_null()
     }
 
-    // A present optional is represented as just the contained value. Note that
-    // this is a lossy representation. For example the values `Some(())` and
-    // `None` both serialize as just `null`.
     fn serialize_some<S>(self, value: &S) -> Result<()>
     where
         S: ?Sized + Serialize,
@@ -425,17 +463,17 @@ impl<'a> ser::Serializer for &'a mut Serializer{
         value.serialize(self)
     }
 
-    // In Serde, unit means an anonymous value containing no data
     fn serialize_unit(self) -> Result<()> {
         self.write_null()
     }
+
+
 
     // Unit struct means a named value containing no data.
     // There is no need to serialize the name in most formats.
     fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
         self.serialize_unit()
     }
-
 
     // When serializing a unit variant (or any other kind of variant), formats
     // can choose whether to keep track of it by index or by name. Binary
@@ -499,6 +537,24 @@ impl<'a> ser::Serializer for &'a mut Serializer{
         }
     }
 
+    // Maps are represented in JSON as `{ K: V, K: V, ... }`.
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
+        match _len {
+            Some(n) => {
+                let length = 2 * _len.unwrap();
+                self.write_code(codes::MAP)?;
+                self.write_list_header(length)?;
+                Ok(self)
+            }
+            None => {
+                Err(serde::de::Error::custom(
+                    "cannot use serde::ser::serialize on uncounted sequences at this time.
+                     If known to be finite use serializer.write_list().
+                     If indet, use begin_open_list & end_list manually."))
+            }
+        }
+    }
+
     // Tuples look just like sequences in JSON. Some formats may be able to
     // represent tuples more efficiently by omitting the length, since tuple
     // means that the corresponding `Deserialize implementation will know the
@@ -528,20 +584,6 @@ impl<'a> ser::Serializer for &'a mut Serializer{
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
         variant.serialize(&mut *self)?;
-        Ok(self)
-    }
-
-
-    // Maps are represented in JSON as `{ K: V, K: V, ... }`.
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        self.write_code(codes::MAP)?;
-        let length = 2 * _len.unwrap();
-        if (length as u8) < ranges::LIST_PACKED_LENGTH_END {
-            self.rawOut.write_raw_byte(codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))?;
-        } else{
-            self.write_code(codes::LIST)?;
-            self.write_count(length)?;
-        }
         Ok(self)
     }
 
@@ -626,14 +668,10 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-// Some `Serialize` types are not able to hold a key and value in memory at the
-// same time so `SerializeMap` implementations are required to support
-// `serialize_key` and `serialize_value` individually.
-//
+
 // There is a third optional method on the `SerializeMap` trait. The
 // `serialize_entry` method allows serializers to optimize for the case where
-// key and value are both available simultaneously. In JSON it doesn't make a
-// difference so the default behavior for `serialize_entry` is fine.
+// key and value are both available simultaneously.
 impl<'a> ser::SerializeMap for &'a mut Serializer {
     type Ok = ();
     type Error = Error;

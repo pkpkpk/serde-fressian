@@ -11,7 +11,7 @@ extern crate serde_bytes;
 
 extern crate serde_fressian;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use serde::Serialize;
 
 use serde_fressian::ser::{Serializer};
@@ -379,5 +379,52 @@ fn list_test(){
     &v.serialize(&mut fw);
     let buf = fw.to_vec();
     assert_eq!(&buf, &control);
+}
+
+
+fn read_count(bytes: Vec<u8>, offset: usize){
+
+}
+
+//set iter has notdet ordering
+fn map_bytes_eq(a: Vec<u8>, b:Vec<u8>) {
+
+    assert_eq!(&a[0], &b[0]);
+
+    // check map flag
+    // check count
+    // pair off rest as map entry tuples, put in sets and compare
+}
+
+#[test]
+fn map_test() {
+    let mut fw = Serializer::new(Vec::new());
+
+    let mut m: HashMap<String, u8> = HashMap::new();
+    m.insert("a".to_string(), 0);
+    #[cfg(not(raw_UTF8))]
+    let control: Vec<u8> = vec![192,230,219,97,0];
+    #[cfg(raw_UTF8)]
+    let control: Vec<u8> = vec![192, 230, 191, 1, 97, 0];
+    fw.write_map(&m).unwrap();
+    let buf = fw.to_vec();
+    assert_eq!(&buf, &control);
+
+    fw.reset();
+
+    // let mut m: HashMap<String, u8> = HashMap::new();
+    // m.insert("a".to_string(), 0);
+    // m.insert("b".to_string(), 1);
+    // #[cfg(not(raw_UTF8))]
+    // let control: Vec<u8> = vec![192,232,219,97,0,219,98,1];
+    // #[cfg(raw_UTF8)]
+    // let control: Vec<u8> = vec![192, 232, 191, 1, 97, 0, 191, 1, 98, 1];
+    // fw.write_map(&m).unwrap();
+    // let buf = fw.to_vec();
+    // assert_eq!(&buf, &control);
+
+
+
+
 }
 
