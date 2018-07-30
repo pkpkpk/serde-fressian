@@ -8,7 +8,10 @@ extern crate serde_derive;
 
 extern crate serde;
 
-pub mod ser;
+extern crate byteorder;
+
 mod imp;
+pub mod ser;
+pub mod de;
 
 
