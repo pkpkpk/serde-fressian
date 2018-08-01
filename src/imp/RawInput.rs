@@ -123,10 +123,6 @@ impl<'a> RawInput<'a> {
         Ok(d)
     }
 
-    // pub fn validateChecksum(&mut self) -> Result<()> {}
-
-    // pub fn close(&mut self) {}
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -134,51 +130,6 @@ impl<'a> RawInput<'a> {
 
 mod test {
     use super::*;
-
-    #[test]
-    fn read_byte_test (){
-        let data: Vec<u8> = vec![0, 1, 2];
-        let mut rdr = RawInput::from_vec(&data);
-
-        assert_eq!(0, rdr.get_bytes_read());
-        assert_eq!(Ok(&0), rdr.read_u8());
-        assert_eq!(Ok(&1), rdr.read_u8());
-        assert_eq!(Ok(&2), rdr.read_u8());
-        assert_eq!(3, rdr.get_bytes_read());
-        assert_eq!(Err(Error::Eof), rdr.read_u8());
-        assert_eq!(3, rdr.get_bytes_read());
-        rdr.reset();
-        assert_eq!(0, rdr.get_bytes_read());
-        assert_eq!(Ok(&0), rdr.read_u8());
-    }
-
-    #[test]
-    fn read_bytes_test (){
-        let data: Vec<u8> = vec![0, 1, 2, 3, 4];
-        let mut rdr = RawInput::from_vec(&data);
-
-        assert_eq!(Err(Error::Eof), rdr.read_bytes(6));
-        let control: &[u8] = &[0,1];
-        assert_eq!(0, rdr.get_bytes_read());
-        assert_eq!(Ok(control), rdr.read_bytes(2));
-        assert_eq!(2, rdr.get_bytes_read());
-        assert_eq!(Err(Error::Eof), rdr.read_bytes(4));
-        let control: &[u8] = &[2,3,4];
-        assert_eq!(Ok(control), rdr.read_bytes(3));
-        assert_eq!(5, rdr.get_bytes_read());
-        assert_eq!(Err(Error::Eof), rdr.read_u8());
-        rdr.reset();
-        let control: &[u8] = &[0,1,2,3,4];
-        assert_eq!(Ok(control), rdr.read_bytes(5));
-    }
-
-    fn bit_switch(l: i64) -> u8 {
-        if l < 0 {
-            (!l).leading_zeros() as u8
-        } else {
-            l.leading_zeros() as u8
-        }
-    }
 
     #[test]
     fn read_raw_ints_test(){
