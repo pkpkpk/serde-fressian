@@ -4,9 +4,10 @@ extern crate serde;
 
 use imp::error::{Error, Result};
 use imp::io::{ByteWriter};
+use imp::codes;
 use std::cmp;
 
-type RawOutput = ByteWriter;
+pub type RawOutput = ByteWriter; ///// make private
 
 impl RawOutput {
 
@@ -66,3 +67,200 @@ impl RawOutput {
     }
 }
 
+
+fn bit_switch(l: i64) -> u8 {
+    if l < 0 {
+        (!l).leading_zeros() as u8
+    } else {
+        l.leading_zeros() as u8
+    }
+}
+
+pub type FressianWriter = RawOutput;
+
+impl FressianWriter {
+
+    fn write_code(&mut self, code: u8) -> Result<()> {
+        self.write_raw_byte(code)
+    }
+
+    pub fn write_int(&mut self, i: i64) -> Result<()> {
+        match bit_switch(i) {
+            1..=14 => {
+                self.write_code(codes::INT)?;
+                self.write_raw_i64(i)
+            }
+
+            15..=22 => {
+                self.write_raw_byte(codes::INT_PACKED_7_ZERO.wrapping_add( (i >> 48) as u8 ))?;
+                self.write_raw_i48(i)
+            }
+
+            23..=30 => {
+                self.write_raw_byte(codes::INT_PACKED_6_ZERO.wrapping_add( (i >> 40) as u8 ))?;
+                self.write_raw_i40(i)
+            }
+
+            31..=38 => {
+                self.write_raw_byte(codes::INT_PACKED_5_ZERO.wrapping_add( (i >> 32) as u8 ))?;
+                self.write_raw_i32(i as i32)
+            }
+
+            39..=44 => {
+                self.write_raw_byte(codes::INT_PACKED_4_ZERO.wrapping_add( (i >> 24) as u8))?;
+                self.write_raw_i24(i as i32)
+            }
+
+            45..=51 => {
+                self.write_raw_byte(codes::INT_PACKED_3_ZERO.wrapping_add( (i >> 16) as u8))?;
+                self.write_raw_i16(i as i32)
+            }
+
+            52..=57 => {
+                self.write_raw_byte(codes::INT_PACKED_2_ZERO.wrapping_add( (i >> 8) as u8))?;
+                self.write_raw_byte(i as u8)
+            }
+
+            58..=64 => {
+                if i < -1 {
+                    self.write_raw_byte(codes::INT_PACKED_2_ZERO.wrapping_add( (i >> 8) as u8))?;
+                    self.write_raw_byte(i as u8)
+                } else {
+                    self.write_raw_byte(i as u8)
+                }
+            }
+
+            _ => Err(serde::de::Error::custom("more than 64 bits in a long!"))///////////////////////////////
+        }
+    }
+
+    pub fn write_float(&mut self, f: f32) -> Result<()> {
+        self.write_code(codes::FLOAT)?;
+        self.write_raw_float(f)
+    }
+
+    pub fn write_double(&mut self, f: f64) -> Result<()> {
+        if f == 0.0 {
+            self.write_code(codes::DOUBLE_0)
+        } else if f == 1.0 {
+            self.write_code(codes::DOUBLE_1)
+        } else {
+            self.write_code(codes::DOUBLE)?;
+            self.write_raw_double(f)
+        }
+    }
+
+    pub fn write_count(&mut self, count: usize) -> Result<()> {
+        self.write_int(count as i64)
+    }
+
+    pub fn write_null(&mut self) -> Result<()> {
+        self.write_code(codes::NULL)
+    }
+
+    pub fn write_boolean(&mut self, b: bool) -> Result<()> {
+        if b {
+            self.write_code(codes::TRUE)
+        } else {
+            self.write_code(codes::FALSE)
+        }
+    }
+}
+
+mod test {
+    use super::*;
+
+    #[test]
+    fn ints_test (){
+        let mut fw = FressianWriter::from_vec(Vec::new());
+        //Short/MIN_VALUE
+        let v: i16 = -32768;
+        let control: Vec<u8> = vec![103, 128, 0];
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        //Short/MAX_VALUE
+        let v: i16 = 32767;
+        let control: Vec<u8> = vec![104, 127, 255];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        //Integer/MIN_VALUE
+        let v: i32 = -2147483648;
+        let control: Vec<u8> = vec![117, 128, 0, 0, 0];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        //Integer/MAX_VALUE
+        let v: i32 = 2147483647;
+        let control: Vec<u8> = vec![118, 127, 255, 255, 255];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // min i40
+        let v: i64 = -549755813887;
+        let control: Vec<u8> = vec![121, 128, 0, 0, 0, 1];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // max i40
+        let v: i64 = 549755813888;
+        let control: Vec<u8> = vec![122, 128, 0, 0, 0, 0];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // max i48
+        let v: i64 = 140737490000000;
+        let control: Vec<u8> = vec![126, 128, 0, 0, 25, 24, 128];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // JS_MAX_SAFE_INT
+        let v: i64 = 9007199254740991;
+        let control: Vec<u8> = vec![248, 0, 31, 255, 255, 255, 255, 255, 255];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // JS_MAX_SAFE_INT++
+        let v: i64 = 9007199254740992;
+        let control: Vec<u8> = vec![248, 0, 32, 0, 0, 0, 0, 0, 0];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // JS_MIN_SAFE_INT
+        let v: i64 = -9007199254740991;
+        let control: Vec<u8> = vec![248, 255, 224, 0, 0, 0, 0, 0, 1];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // JS_MIN_SAFE_INT--
+        let v: i64 = -9007199254740992;
+        let control: Vec<u8> = vec![248, 255, 224, 0, 0, 0, 0, 0, 0];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // long max (i64)
+        let v: i64 = 9223372036854775807;
+        let control: Vec<u8> = vec![248, 127, 255, 255, 255, 255, 255, 255, 255];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // long min (i64)
+        let v: i64 = -9223372036854775808;
+        let control: Vec<u8> = vec![248, 128, 0, 0, 0, 0, 0, 0, 0];
+        fw.reset();
+        fw.write_int(v as i64).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+    }
+}
