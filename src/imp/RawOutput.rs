@@ -77,6 +77,46 @@ fn bit_switch(l: i64) -> u8 {
     }
 }
 
+fn encoding_size(ch: u32) -> usize {
+    if ch <= 0x007f{
+        return 1;
+    } else if ch > 0x07ff {
+        return 3;
+    } else {
+        return 2;
+    }
+}
+
+fn add_byte_at_index(v: &mut Vec<u8>, index: &mut usize, byte: u8){
+    let length = v.len();
+    if *index <= length {
+        v.push(byte);
+        *index += 1;
+    } else {
+        assert!(*index < length);
+        v[*index] = byte;
+        *index += 1;
+    }
+}
+
+// used by write-string to pack each utf8 char
+fn write_char(ch: u32, buffer: &mut Vec<u8>, buf_pos: &mut usize){
+    match encoding_size(ch) {
+        1 => {
+            add_byte_at_index(buffer, buf_pos, ch as u8);
+        },
+        2 => {
+            add_byte_at_index(buffer, buf_pos, (0xc0 | ch as u32 >> 6 & 0x1f) as u8);
+            add_byte_at_index(buffer, buf_pos, (0x80 | ch as u32 >> 0 & 0x3f) as u8);
+        },
+        _ => {
+            add_byte_at_index(buffer, buf_pos, (0xe0 | ch as u32 >> 12 & 0x0f) as u8);
+            add_byte_at_index(buffer, buf_pos, (0x80 | ch as u32 >>  6 & 0x3f) as u8);
+            add_byte_at_index(buffer, buf_pos, (0x80 | ch as u32 >>  0 & 0x3f) as u8);
+        }
+    }
+}
+
 pub type FressianWriter = RawOutput;
 
 impl FressianWriter {
@@ -185,6 +225,88 @@ impl FressianWriter {
             self.write_count(length)?;
             self.write_raw_bytes(bytes, offset, length)
         }
+    }
+
+    #[cfg(not(raw_UTF8))]
+    pub fn write_string(&mut self, s: &str) -> Result<()> {
+        let char_length: usize = s.chars().count();
+
+        if char_length == 0 {
+            self.write_raw_byte(codes::STRING_PACKED_LENGTH_START)?;
+        } else {
+            // chars > 0xFFFF are actually 2 chars in java, need a separate string length
+            // to write the appropriate code into the bytes
+            let mut j_char_length = char_length;
+            let mut string_pos: usize = 0;
+            let mut j_string_pos: usize = 0;
+            let mut iter = itertools::put_back(s.chars());
+
+            // let maxBufNeeded: usize = cmp::min(65536, CHAR_LENGTH * 3);
+            // ^ silently fails, should be using char count. compiler bug?
+            let max_buf_needed: usize = cmp::min(65536, s.len() * 3);
+            let mut buffer: Vec<u8> = Vec::with_capacity(max_buf_needed); //abstract out into stringbuffer, re-use
+
+            while string_pos < char_length {
+                let mut buf_pos = 0;
+                loop {
+
+                    let ch: Option<char> = iter.next();
+
+                    match ch {
+                        Some(ch) => {
+                            let enc_size = encoding_size(ch as u32);
+
+                            if (buf_pos + enc_size) < max_buf_needed {
+                                if 0xFFFF < ch as u32 {
+                                    // must emulate java chars:
+                                    // supplementary characters are represented as a pair of char values
+                                    //  - the high-surrogates range, (\uD800-\uDBFF)
+                                    //  - the low-surrogates range (\uDC00-\uDFFF)
+                                    let mut utf16_bytes: Vec<u16> =  vec![0; 2];
+                                    ch.encode_utf16(&mut utf16_bytes);
+                                    write_char(utf16_bytes[0] as u32, &mut buffer, &mut buf_pos);
+                                    write_char(utf16_bytes[1] as u32, &mut buffer, &mut buf_pos);
+                                    string_pos += 1; //a 1 rust char...
+                                    j_string_pos += 2; // equivalent to eating 2 java chars
+                                    j_char_length += 1; // track extra java char we created
+                                    continue;
+                                } else {
+                                    write_char(ch as u32, &mut buffer, &mut buf_pos);
+                                    string_pos += 1;
+                                    j_string_pos += 1;
+                                    continue;
+                                }
+                            } else {
+                                iter.put_back(ch);
+                                break;
+                            }
+                        }
+                        None  => { break }
+                    }
+                }
+                if buf_pos < ranges::STRING_PACKED_LENGTH_END {
+                    self.write_raw_byte(codes::STRING_PACKED_LENGTH_START.wrapping_add( buf_pos as u8))?;
+                } else if j_string_pos == j_char_length {
+                    self.write_code(codes::STRING)?;
+                    self.write_count(buf_pos)?;
+                } else {
+                    self.write_code(codes::STRING_CHUNK)?;
+                    self.write_count(buf_pos)?;
+                }
+                self.write_raw_bytes(&buffer,0,buf_pos)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    #[cfg(raw_UTF8)]
+    pub fn write_string(&mut self, s: &str) -> Result<()> {
+        let bytes = s.as_bytes();
+        let length = bytes.len();
+        self.write_code(codes::UTF8)?;
+        self.write_count(length)?;
+        self.write_raw_bytes(&bytes.to_vec(), 0, length)
     }
 }
 
@@ -341,5 +463,39 @@ mod test {
         //missing chunked
     }
 
+    #[test]
+    fn write_string_test(){
+        let mut fw = FressianWriter::from_vec(Vec::new());
+
+        let v = "".to_string();
+        #[cfg(not(raw_UTF8))]
+        let control: Vec<u8> = vec![218];
+        #[cfg(raw_UTF8)]
+        let control: Vec<u8> = vec![191,0];
+        fw.write_string(&v).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        fw.reset();
+
+        let v = "hola".to_string();
+        #[cfg(not(raw_UTF8))]
+        let control: Vec<u8> = vec![222,104,111,108,97];
+        #[cfg(raw_UTF8)]
+        let control: Vec<u8> = vec![191,4,104,111,108,97];
+        fw.write_string(&v).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        fw.reset();
+
+        let v = "é❤️ßℝ東京東京😉 😎 🤔 😐 🙄".to_string();
+        #[cfg(not(raw_UTF8))]
+        let control: Vec<u8> = vec![227,60,101,204,129,226,157,164,239,184,143,195,159,226,132,157,230,157,177,228,186,172,230,157,177,228,186,172,237,160,189,237,184,137,32,237,160,189,237,184,142,32,237,160,190,237,180,148,32,237,160,189,237,184,144,32,237,160,189,237,185,132];
+        #[cfg(raw_UTF8)]
+        let control: Vec<u8> = vec![191,50,101,204,129,226,157,164,239,184,143,195,159,226,132,157,230,157,177,228,186,172,230,157,177,228,186,172,240,159,152,137,32,240,159,152,142,32,240,159,164,148,32,240,159,152,144,32,240,159,153,132];
+        fw.write_string(&v).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        // missing chunked
+    }
 }
 
