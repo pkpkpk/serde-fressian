@@ -263,4 +263,39 @@ mod test {
         fw.write_int(v as i64).unwrap();
         assert_eq!(&fw.to_vec(), &control);
     }
+
+    #[test]
+    fn write_floats_test(){
+        let mut fw = FressianWriter::from_vec(Vec::new());
+
+        //Float/MIN_VALUE
+        let v: f32 = 1.4E-45;
+        let control: Vec<u8> = vec![249, 0, 0, 0, 1];
+        fw.write_float(v).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        fw.reset();
+
+        //Float/MAX_VALUE
+        let v: f32 = 3.4028235E38;
+        let control: Vec<u8> = vec![249, 127, 127, 255, 255];
+        fw.write_float(v).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        fw.reset();
+
+        // DOUBLE/MIN_VALUE
+        let v: f64 = 4.9E-324;
+        let control: Vec<u8> = vec![250, 0, 0, 0, 0, 0, 0, 0, 1];
+        fw.write_double(v).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        fw.reset();
+
+        // DOUBLE/MAX_VALUE
+        let v: f64 = 1.7976931348623157E308;
+        let control: Vec<u8> = vec![250, 127, 239, 255, 255, 255, 255, 255, 255 ];
+        fw.write_double(v).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+    }
 }
