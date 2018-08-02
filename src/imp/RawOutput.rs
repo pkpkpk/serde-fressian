@@ -5,6 +5,7 @@ extern crate serde;
 use imp::error::{Error, Result};
 use imp::io::{ByteWriter};
 use imp::codes;
+use imp::ranges;
 use std::cmp;
 
 pub type RawOutput = ByteWriter; ///// make private
@@ -165,6 +166,26 @@ impl FressianWriter {
             self.write_code(codes::FALSE)
         }
     }
+
+    pub fn write_bytes(&mut self, bytes: &[u8], offset: usize, length: usize) -> Result<()> {
+        if length < ranges::BYTES_PACKED_LENGTH_END {
+            self.write_raw_byte(codes::BYTES_PACKED_LENGTH_START + length as u8)?;
+            self.write_raw_bytes(bytes, offset,length)
+        } else {
+            let mut length = length;
+            let mut offset = offset;
+            while ranges::BYTE_CHUNK_SIZE < length {
+                self.write_code(codes::BYTES_CHUNK)?;
+                self.write_count(ranges::BYTE_CHUNK_SIZE)?;
+                self.write_raw_bytes(bytes, offset, ranges::BYTE_CHUNK_SIZE)?;
+                offset += ranges::BYTE_CHUNK_SIZE;
+                length -= ranges::BYTE_CHUNK_SIZE;
+            };
+            self.write_code(codes::BYTES)?;
+            self.write_count(length)?;
+            self.write_raw_bytes(bytes, offset, length)
+        }
+    }
 }
 
 mod test {
@@ -298,4 +319,27 @@ mod test {
         fw.write_double(v).unwrap();
         assert_eq!(&fw.to_vec(), &control);
     }
+
+    #[test]
+    fn write_bytes_test(){
+        let mut fw = FressianWriter::from_vec(Vec::new());
+
+        // packed count
+        let v: Vec<u8> = vec![255,254,253,0,1,2,3];
+        let control: Vec<u8> = vec![215,255,254,253,0,1,2,3];
+        fw.write_bytes(v.as_slice(), 0, v.len()).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        fw.reset();
+
+        // unpacked length
+        let v: Vec<u8> = vec![252,253,254,255,0,1,2,3,4];
+        let control: Vec<u8> = vec![217, 9, 252, 253, 254, 255, 0, 1, 2, 3, 4];
+        fw.write_bytes(v.as_slice(), 0, v.len()).unwrap();
+        assert_eq!(&fw.to_vec(), &control);
+
+        //missing chunked
+    }
+
 }
+
