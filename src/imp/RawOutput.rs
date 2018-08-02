@@ -121,7 +121,7 @@ pub type FressianWriter = RawOutput;
 
 impl FressianWriter {
 
-    fn write_code(&mut self, code: u8) -> Result<()> {
+    pub fn write_code(&mut self, code: u8) -> Result<()> {
         self.write_raw_byte(code)
     }
 

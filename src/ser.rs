@@ -1,301 +1,32 @@
 extern crate serde;
 
 use serde::ser::{self, Serialize};
+
+use std::cmp;
+
 use imp::RawOutput::*;
 use imp::codes;
 use imp::ranges;
-use std::cmp;
+use imp::error::{Error, Result};
 
-mod error {
-    pub use serde::de::value::Error;
-    pub type Result<T> = ::std::result::Result<T, Error>;
-}
-
-use self::error::{Error, Result};
-
-fn bit_switch(l: i64) -> u8 {
-    if l < 0 {
-        (!l).leading_zeros() as u8
-    } else {
-        l.leading_zeros() as u8
-    }
-}
-
-fn add_byte_at_index(v: &mut Vec<u8>, index: &mut usize, byte: u8){
-    let length = v.len();
-    if *index <= length {
-        v.push(byte);
-        *index += 1;
-    } else {
-        assert!(*index < length);
-        v[*index] = byte;
-        *index += 1;
-    }
-}
-
-fn encoding_size(ch: u32) -> usize {
-    if ch <= 0x007f{
-        return 1;
-    } else if ch > 0x07ff {
-        return 3;
-    } else {
-        return 2;
-    }
-}
-
-// used by write-string to pack each utf8 char
-fn write_char(ch: u32, buffer: &mut Vec<u8>, buf_pos: &mut usize){
-    match encoding_size(ch) {
-        1 => {
-            add_byte_at_index(buffer, buf_pos, ch as u8);
-        },
-        2 => {
-            add_byte_at_index(buffer, buf_pos, (0xc0 | ch as u32 >> 6 & 0x1f) as u8);
-            add_byte_at_index(buffer, buf_pos, (0x80 | ch as u32 >> 0 & 0x3f) as u8);
-        },
-        _ => {
-            add_byte_at_index(buffer, buf_pos, (0xe0 | ch as u32 >> 12 & 0x0f) as u8);
-            add_byte_at_index(buffer, buf_pos, (0x80 | ch as u32 >>  6 & 0x3f) as u8);
-            add_byte_at_index(buffer, buf_pos, (0x80 | ch as u32 >>  0 & 0x3f) as u8);
-        }
-    }
-}
-
-pub struct Serializer {
-    rawOut: RawOutput
-}
+pub type Serializer = RawOutput;
 
 impl Serializer{
     pub fn new(out: Vec<u8>) -> Serializer {
-        Serializer {
-            rawOut: RawOutput::new(out),
-        }
-    }
-
-    pub fn get_bytes_written(&self) -> u64 {
-        self.rawOut.get_bytes_written()
+        RawOutput::from_vec(out)
     }
 
     pub fn write_footer(&mut self) -> Result<()> {
         let length = self.get_bytes_written();
         // self.clear_caches()
-        self.rawOut.write_raw_i32(codes::FOOTER_MAGIC as i32)?;
-        self.rawOut.write_raw_i32(length as i32)?; //////////////////////////////
+        self.write_raw_i32(codes::FOOTER_MAGIC as i32)?;
+        self.write_raw_i32(length as i32)?; //?
         let checksum = 0; //rawOut.getChecksum().getValue()
-        self.rawOut.write_raw_i32(checksum)
+        self.write_raw_i32(checksum)
         // self.reset();
     }
 
-    pub fn into_inner(self) -> Vec<u8> {
-        self.rawOut.into_inner()
-    }
-
-    // Get ref to outs buffer, including bytes past bytes written
-    pub fn get_ref(&self) -> &Vec<u8> {
-        &self.rawOut.get_ref()
-    }
-
-    pub fn reset(&mut self) {
-        self.rawOut.reset()
-    }
-
-    pub fn to_vec(&mut self) -> Vec<u8> {
-        self.rawOut.to_vec()
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-
-    fn write_code(&mut self, code: u8) -> Result<()> {
-        self.rawOut.write_raw_byte(code)
-    }
-
-    pub fn write_count(&mut self, count: usize) -> Result<()> {
-        self.write_int(count as i64)
-    }
-
-    pub fn write_null(&mut self) -> Result<()> {
-        self.write_code(codes::NULL)
-    }
-
-    pub fn write_boolean(&mut self, b: bool) -> Result<()> {
-        if b {
-            self.write_code(codes::TRUE)
-        } else {
-            self.write_code(codes::FALSE)
-        }
-    }
-
-    pub fn write_float(&mut self, f: f32) -> Result<()> {
-        self.write_code(codes::FLOAT)?;
-        self.rawOut.write_raw_float(f)
-    }
-
-    pub fn write_double(&mut self, f: f64) -> Result<()> {
-        if f == 0.0 {
-            self.write_code(codes::DOUBLE_0)
-        } else if f == 1.0 {
-            self.write_code(codes::DOUBLE_1)
-        } else {
-            self.write_code(codes::DOUBLE)?;
-            self.rawOut.write_raw_double(f)
-        }
-    }
-
-    pub fn write_int(&mut self, i: i64) -> Result<()> {
-        match bit_switch(i) {
-            1..=14 => {
-                self.write_code(codes::INT)?;
-                self.rawOut.write_raw_i64(i)
-            }
-
-            15..=22 => {
-                self.rawOut.write_raw_byte(codes::INT_PACKED_7_ZERO.wrapping_add( (i >> 48) as u8 ))?;
-                self.rawOut.write_raw_i48(i)
-            }
-
-            23..=30 => {
-                self.rawOut.write_raw_byte(codes::INT_PACKED_6_ZERO.wrapping_add( (i >> 40) as u8 ))?;
-                self.rawOut.write_raw_i40(i)
-            }
-
-            31..=38 => {
-                self.rawOut.write_raw_byte(codes::INT_PACKED_5_ZERO.wrapping_add( (i >> 32) as u8 ))?;
-                self.rawOut.write_raw_i32(i as i32)
-            }
-
-            39..=44 => {
-                self.rawOut.write_raw_byte(codes::INT_PACKED_4_ZERO.wrapping_add( (i >> 24) as u8))?;
-                self.rawOut.write_raw_i24(i as i32)
-            }
-
-            45..=51 => {
-                self.rawOut.write_raw_byte(codes::INT_PACKED_3_ZERO.wrapping_add( (i >> 16) as u8))?;
-                self.rawOut.write_raw_i16(i as i32)
-            }
-
-            52..=57 => {
-                self.rawOut.write_raw_byte(codes::INT_PACKED_2_ZERO.wrapping_add( (i >> 8) as u8))?;
-                self.rawOut.write_raw_byte(i as u8)
-            }
-
-            58..=64 => {
-                if i < -1 {
-                    self.rawOut.write_raw_byte(codes::INT_PACKED_2_ZERO.wrapping_add( (i >> 8) as u8))?;
-                    self.rawOut.write_raw_byte(i as u8)
-                } else {
-                    self.rawOut.write_raw_byte(i as u8)
-                }
-            }
-
-            _ => Err(serde::de::Error::custom("more than 64 bits in a long!"))
-        }
-    }
-
-    #[cfg(not(raw_UTF8))]
-    pub fn write_string(&mut self, s: &str) -> Result<()> {
-        let char_length: usize = s.chars().count();
-
-        if char_length == 0 {
-            self.rawOut.write_raw_byte(codes::STRING_PACKED_LENGTH_START)?;
-        } else {
-            // chars > 0xFFFF are actually 2 chars in java, need a separate string length
-            // to write the appropriate code into the bytes
-            let mut j_char_length = char_length;
-            let mut string_pos: usize = 0;
-            let mut j_string_pos: usize = 0;
-            let mut iter = itertools::put_back(s.chars());
-
-            // let maxBufNeeded: usize = cmp::min(65536, CHAR_LENGTH * 3);
-            // ^ silently fails, should be using char count. compiler bug?
-            let max_buf_needed: usize = cmp::min(65536, s.len() * 3);
-            let mut buffer: Vec<u8> = Vec::with_capacity(max_buf_needed); //abstract out into stringbuffer, re-use
-
-            while string_pos < char_length {
-                let mut buf_pos = 0;
-                loop {
-
-                    let ch: Option<char> = iter.next();
-
-                    match ch {
-                        Some(ch) => {
-                            let enc_size = encoding_size(ch as u32);
-
-                            if (buf_pos + enc_size) < max_buf_needed {
-                                if 0xFFFF < ch as u32 {
-                                    // must emulate java chars:
-                                    // supplementary characters are represented as a pair of char values
-                                    //  - the high-surrogates range, (\uD800-\uDBFF)
-                                    //  - the low-surrogates range (\uDC00-\uDFFF)
-                                    let mut utf16_bytes: Vec<u16> =  vec![0; 2];
-                                    ch.encode_utf16(&mut utf16_bytes);
-                                    write_char(utf16_bytes[0] as u32, &mut buffer, &mut buf_pos);
-                                    write_char(utf16_bytes[1] as u32, &mut buffer, &mut buf_pos);
-                                    string_pos += 1; //a 1 rust char...
-                                    j_string_pos += 2; // equivalent to eating 2 java chars
-                                    j_char_length += 1; // track extra java char we created
-                                    continue;
-                                } else {
-                                    write_char(ch as u32, &mut buffer, &mut buf_pos);
-                                    string_pos += 1;
-                                    j_string_pos += 1;
-                                    continue;
-                                }
-                            } else {
-                                iter.put_back(ch);
-                                break;
-                            }
-                        }
-                        None  => { break }
-                    }
-                }
-                if buf_pos < ranges::STRING_PACKED_LENGTH_END {
-                    self.rawOut.write_raw_byte(codes::STRING_PACKED_LENGTH_START.wrapping_add( buf_pos as u8))?;
-                } else if j_string_pos == j_char_length {
-                    self.write_code(codes::STRING)?;
-                    self.write_count(buf_pos)?;
-                } else {
-                    self.write_code(codes::STRING_CHUNK)?;
-                    self.write_count(buf_pos)?;
-                }
-                self.rawOut.write_raw_bytes(&buffer,0,buf_pos)?;
-            }
-        }
-
-        Ok(())
-    }
-
-    #[cfg(raw_UTF8)]
-    pub fn write_string(&mut self, s: &str) -> Result<()> {
-        let bytes = s.as_bytes();
-        let length = bytes.len();
-        self.write_code(codes::UTF8)?;
-        self.write_count(length)?;
-        self.rawOut.write_raw_bytes(&bytes.to_vec(), 0, length)
-    }
-
-    pub fn write_bytes(&mut self, bytes: &Vec<u8>, offset: usize, length: usize) -> Result<()> {
-        if length < ranges::BYTES_PACKED_LENGTH_END {
-            self.rawOut.write_raw_byte(codes::BYTES_PACKED_LENGTH_START + length as u8)?;
-            self.rawOut.write_raw_bytes(bytes, offset,length)
-        } else {
-            let mut length = length;
-            let mut offset = offset;
-            while ranges::BYTE_CHUNK_SIZE < length {
-                self.write_code(codes::BYTES_CHUNK)?;
-                self.write_count(ranges::BYTE_CHUNK_SIZE)?;
-                self.rawOut.write_raw_bytes(bytes, offset, ranges::BYTE_CHUNK_SIZE)?;
-                offset += ranges::BYTE_CHUNK_SIZE;
-                length -= ranges::BYTE_CHUNK_SIZE;
-            };
-            self.write_code(codes::BYTES)?;
-            self.write_count(length)?;
-            self.rawOut.write_raw_bytes(bytes, offset, length)
-        }
-    }
-
     pub fn begin_open_list(&mut self) -> Result<()> {
-        // if (0 != rawOut.get_bytes_written())
-        //     throw new IllegalStateException("openList must be called from the top level, outside any footer context.");
         self.write_code(codes::BEGIN_OPEN_LIST)
     }
 
@@ -309,7 +40,7 @@ impl Serializer{
 
     pub fn write_list_header(&mut self, length: usize) -> Result<()>{
         if (length as u8) < ranges::LIST_PACKED_LENGTH_END {
-            self.rawOut.write_raw_byte(codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))
+            self.write_raw_byte(codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))
         } else {
             self.write_code(codes::LIST)?;
             self.write_count(length)
@@ -380,8 +111,6 @@ impl Serializer{
         self.write_code(codes::SET)?;
         self.write_list(iter)
     }
-
-
 }
 
 impl<'a> ser::Serializer for &'a mut Serializer{
@@ -395,66 +124,43 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     type SerializeStruct = Self;
     type SerializeStructVariant = Self;
 
-    fn serialize_bool(self, v: bool) -> Result<()> {
-        self.write_boolean(v)
-    }
+    fn serialize_bool(self, v: bool) -> Result<()> { self.write_boolean(v) }
 
-    fn serialize_i8(self, v: i8) -> Result<()> {
-        self.write_int(i64::from(v))
-    }
+    fn serialize_none(self) -> Result<()> { self.write_null() }
 
-    fn serialize_i16(self, v: i16) -> Result<()> {
-        self.write_int(i64::from(v))
-    }
+    fn serialize_i8(self, v: i8) -> Result<()> { self.write_int(i64::from(v)) }
 
-    fn serialize_i32(self, v: i32) -> Result<()> {
-        self.write_int(i64::from(v))
-    }
+    fn serialize_i16(self, v: i16) -> Result<()> { self.write_int(i64::from(v)) }
 
-    fn serialize_i64(self, v: i64) -> Result<()> {
-        self.write_int(v)
-    }
+    fn serialize_i32(self, v: i32) -> Result<()> { self.write_int(i64::from(v)) }
 
-    fn serialize_u8(self, v: u8) -> Result<()> {
-        self.write_int(i64::from(v))
-    }
+    fn serialize_i64(self, v: i64) -> Result<()> { self.write_int(v) }
 
-    fn serialize_u16(self, v: u16) -> Result<()> {
-        self.write_int(i64::from(v))
-    }
+    fn serialize_u8(self, v: u8) -> Result<()> { self.write_int(i64::from(v)) }
 
-    fn serialize_u32(self, v: u32) -> Result<()> {
-        self.write_int(i64::from(v))
-    }
+    fn serialize_u16(self, v: u16) -> Result<()> { self.write_int(i64::from(v)) }
+
+    fn serialize_u32(self, v: u32) -> Result<()> { self.write_int(i64::from(v)) }
 
     fn serialize_u64(self, v: u64) -> Result<()> {/////////////////////////////////////////////////
         Ok(())
     }
 
-    fn serialize_f32(self, v: f32) -> Result<()> {
-        self.write_float(v)
-    }
+    fn serialize_f32(self, v: f32) -> Result<()> { self.write_float(v) }
 
-    fn serialize_f64(self, v: f64) -> Result<()> {
-        self.write_double(v)
-    }
+    fn serialize_f64(self, v: f64) -> Result<()> { self.write_double(v) }
 
-    fn serialize_char(self, v: char) -> Result<()> {
-        self.serialize_str(&v.to_string())
-    }
 
-    fn serialize_str(self, v: &str) -> Result<()> {
-        self.write_string(&v.to_string())
-    }
+
+    fn serialize_char(self, v: char) -> Result<()> { self.serialize_str(&v.to_string()) }
+
+    fn serialize_str(self, v: &str) -> Result<()> { self.write_string(&v.to_string()) }
 
     fn serialize_bytes(self, bytes: &[u8]) -> Result<()> {
         self.write_bytes(&bytes.to_vec(), 0, bytes.len())
     }
 
-    // An absent optional is represented as the JSON `null`.
-    fn serialize_none(self) -> Result<()> {
-        self.write_null()
-    }
+
 
     fn serialize_some<S>(self, value: &S) -> Result<()>
     where
@@ -537,7 +243,6 @@ impl<'a> ser::Serializer for &'a mut Serializer{
         }
     }
 
-    // Maps are represented in JSON as `{ K: V, K: V, ... }`.
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
         match _len {
             Some(n) => {
@@ -549,6 +254,7 @@ impl<'a> ser::Serializer for &'a mut Serializer{
             None => {
                 Err(serde::de::Error::custom(
                     "cannot use serde::ser::serialize on uncounted sequences at this time.
+                     If map, use serializer.write_list().
                      If known to be finite use serializer.write_list().
                      If indet, use begin_open_list & end_list manually."))
             }
@@ -732,19 +438,19 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
 
 
 
-// write a value to bytes, skipping writer creation
-pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
-where
-    T: Serialize,
-{
-    let buf = Vec::with_capacity(100);
-    let mut serializer = Serializer {
-        rawOut: RawOutput::new(buf)
-    };
-
-    value.serialize(&mut serializer)?;
-    Ok(serializer.rawOut.into_inner())
-}
+// // write a value to bytes, skipping writer creation
+// pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
+// where
+//     T: Serialize,
+// {
+//     let buf = Vec::with_capacity(100);
+//     let mut serializer = Serializer {
+//         rawOut: RawOutput::from_vec(buf)
+//     };
+//
+//     value.serialize(&mut serializer)?;
+//     Ok(serializer.rawOut.into_inner())
+// }
 
 
 
