@@ -19,7 +19,7 @@ use serde_fressian::ser::{Serializer};
 
 #[test]
 fn test_reset(){
-    let mut fw = Serializer::new(Vec::new());
+    let mut fw = Serializer::new();
 
     let v: Vec<i64> = vec![-2, -1, 0, 1, 2];
     let control: Vec<u8> = vec![233,79,254,255,0,1,2];
@@ -32,9 +32,53 @@ fn test_reset(){
     assert_eq!(&buf, &control);
 }
 
+
+#[test]
+fn bytes_serialization_test(){
+    let mut fw = Serializer::new();
+
+    //// manually specifying FressianWriter.write_bytes()
+    //-----  packed count
+    let v: Vec<u8> = vec![255,254,253,0,1,2,3];
+    let control: Vec<u8> = vec![215,255,254,253,0,1,2,3];
+    fw.write_bytes(&v, 0, v.len()).unwrap();
+    assert_eq!(&fw.to_vec(), &control);
+    fw.reset();
+    fw.write_bytes(v.as_slice(), 0, v.len()).unwrap();
+    assert_eq!(&fw.to_vec(), &control);
+    //---   unpacked length
+    let v: Vec<u8> = vec![252,253,254,255,0,1,2,3,4];
+    let control: Vec<u8> = vec![217, 9, 252, 253, 254, 255, 0, 1, 2, 3, 4];
+    fw.reset();
+    fw.write_bytes(&v, 0, v.len()).unwrap();
+    assert_eq!(&fw.to_vec(), &control);
+    fw.reset();
+    fw.write_bytes(v.as_slice(), 0, v.len()).unwrap();
+    assert_eq!(&fw.to_vec(), &control);
+
+    //// I have no idea why this doesnt work
+    // fw.reset();
+    // &mut fw.serialize_bytes(v.as_slice()).unwrap();
+    // assert_eq!(&fw.to_vec(), &control);
+
+
+    // By default, serde writes Vec<u8> + &[u8] as lists when calling .serialize()
+    // - see https://serde.rs/impl-serialize.html#other-special-cases
+    // - can't override built in serialize impl?
+    // https://github.com/rust-lang/rust/issues/31844
+    // soln -> https://docs.serde.rs/serde_bytes/
+    let bb = serde_bytes::ByteBuf::from(v);
+    fw.reset();
+    bb.serialize(&mut fw).unwrap();
+    assert_eq!(&fw.to_vec(), &control);
+
+
+}
+
+
 #[test]
 fn list_test(){
-    let mut fw = Serializer::new(Vec::new());
+    let mut fw = Serializer::new();
 
     let v: Vec<i64> = vec![-2, -1, 0, 1, 2];
     let control: Vec<u8> = vec![233,79,254,255,0,1,2];
@@ -99,7 +143,7 @@ fn map_bytes_eq(a: Vec<u8>, b:Vec<u8>) {
 
 #[test]
 fn map_test() {
-    let mut fw = Serializer::new(Vec::new());
+    let mut fw = Serializer::new();
 
     let mut m: HashMap<String, u8> = HashMap::new();
     m.insert("a".to_string(), 0);

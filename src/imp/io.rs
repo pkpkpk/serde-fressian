@@ -222,15 +222,15 @@ mod test {
     #[test]
     fn write_raw_byte_test (){
         let mut wrt = ByteWriter::from_vec(Vec::new());
-        wrt.write_raw_byte(99 as u8);
-        wrt.write_raw_byte(100 as u8);
-        wrt.write_raw_byte(101 as u8);
+        wrt.write_raw_byte(99 as u8).unwrap();
+        wrt.write_raw_byte(100 as u8).unwrap();
+        wrt.write_raw_byte(101 as u8).unwrap();
         let control: Vec<u8> = vec![99, 100, 101];
         assert_eq!(&wrt.to_vec(), &control);
         assert_eq!(wrt.get_bytes_written(), 3);
         wrt.reset();
         assert_eq!(wrt.get_bytes_written(), 0);
-        wrt.write_raw_byte(54 as u8);
+        wrt.write_raw_byte(54 as u8).unwrap();
         let control: Vec<u8> = vec![54];
         assert_eq!(&wrt.to_vec(), &control);
     }
@@ -239,11 +239,11 @@ mod test {
     fn write_raw_bytes_test(){
         let mut wrt = ByteWriter::from_vec(Vec::new());
         let v: Vec<u8> = vec![255,254,253,0,1,2,3];
-        wrt.write_raw_bytes(v.as_slice(), 0, v.len());
+        wrt.write_raw_bytes(v.as_slice(), 0, v.len()).unwrap();
         assert_eq!(&wrt.to_vec(), &v);
         wrt.reset();
         assert_eq!(&wrt.to_vec(), &vec![]);
-        wrt.write_raw_bytes(v.as_slice(), 2, 3);
+        wrt.write_raw_bytes(v.as_slice(), 2, 3).unwrap();
         assert_eq!(&wrt.to_vec(), &vec![253, 0, 1]);
     }
 }

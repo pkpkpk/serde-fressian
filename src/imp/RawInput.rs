@@ -1,3 +1,5 @@
+#![allow(overflowing_literals)]
+
 use imp::codes;
 use imp::error::{Error, Result};
 use imp::io::{ByteReader};

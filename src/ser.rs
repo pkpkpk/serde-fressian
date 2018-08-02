@@ -12,8 +12,12 @@ use imp::error::{Error, Result};
 pub type Serializer = RawOutput;
 
 impl Serializer{
-    pub fn new(out: Vec<u8>) -> Serializer {
-        RawOutput::from_vec(out)
+    pub fn new() -> Serializer {
+        RawOutput::from_vec(Vec::new())
+    }
+
+    pub fn with_capacity(cap: usize) -> Serializer {
+        RawOutput::from_vec(Vec::with_capacity(cap))
     }
 
     pub fn write_footer(&mut self) -> Result<()> {
@@ -150,17 +154,11 @@ impl<'a> ser::Serializer for &'a mut Serializer{
 
     fn serialize_f64(self, v: f64) -> Result<()> { self.write_double(v) }
 
-
-
     fn serialize_char(self, v: char) -> Result<()> { self.serialize_str(&v.to_string()) }
 
-    fn serialize_str(self, v: &str) -> Result<()> { self.write_string(&v.to_string()) }
+    fn serialize_str(self, v: &str) -> Result<()> { self.write_string(v) }
 
-    fn serialize_bytes(self, bytes: &[u8]) -> Result<()> {
-        self.write_bytes(&bytes.to_vec(), 0, bytes.len())
-    }
-
-
+    fn serialize_bytes(self, bytes: &[u8]) -> Result<()> { self.write_bytes(bytes, 0, bytes.len()) }
 
     fn serialize_some<S>(self, value: &S) -> Result<()>
     where
@@ -494,4 +492,10 @@ where
         (lo, Some(hi)) if lo == hi => Some(lo),
         _ => None,
     }
+}
+
+
+mod test {
+    use super::*;
+
 }
