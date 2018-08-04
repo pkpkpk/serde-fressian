@@ -5,24 +5,24 @@ use imp::error::{Error, Result};
 use imp::io::{ByteReader};
 use byteorder::*;
 
-type RawInput<'a> = ByteReader<'a>;
+pub type RawInput<'a> = ByteReader<'a>;
 
 impl<'a> RawInput<'a> {
 
-    pub fn read_raw_i16(&mut self) -> Result<i64> {
+    fn read_raw_i16(&mut self) -> Result<i64> {
         let high = *self.read_u8()? as i64;
         let low  = *self.read_u8()? as i64;
         Ok( (high << 8) + low)
     }
 
-    pub fn read_raw_i24(&mut self) -> Result<i64> {
+    fn read_raw_i24(&mut self) -> Result<i64> {
         let a = *self.read_u8()? as i64;
         let b = *self.read_u8()? as i64;
         let c = *self.read_u8()? as i64;
         Ok((a << 16) + (b << 8) + c)
     }
 
-    pub fn read_raw_i32(&mut self) -> Result<i64> {
+    fn read_raw_i32(&mut self) -> Result<i64> {
         let a = *self.read_u8()? as i64 & std::u8::MAX as i64;
         let b = *self.read_u8()? as i64 & std::u8::MAX as i64;
         let c = *self.read_u8()? as i64 & std::u8::MAX as i64;
@@ -30,19 +30,19 @@ impl<'a> RawInput<'a> {
         Ok( ((a << 24) | (b << 16) | (c << 8) | d) & std::u32::MAX as i64)
     }
 
-    pub fn read_raw_i40(&mut self) -> Result<i64> {
+    fn read_raw_i40(&mut self) -> Result<i64> {
         let high = *self.read_u8()? as i64;
         let low = self.read_raw_i32()?;
         Ok( (high << 32) + low )
     }
 
-    pub fn read_raw_i48(&mut self) -> Result<i64> {
+    fn read_raw_i48(&mut self) -> Result<i64> {
         let high = *self.read_u8()? as i64;
         let low = self.read_raw_i40()?;
         Ok( (high << 40) + low )
     }
 
-    pub fn read_raw_i64(&mut self) -> Result<i64> {
+    fn read_raw_i64(&mut self) -> Result<i64> {
         let a = *self.read_u8()? as i64 & std::u8::MAX as i64;
         let b = *self.read_u8()? as i64 & std::u8::MAX as i64;
         let c = *self.read_u8()? as i64 & std::u8::MAX as i64;
@@ -113,16 +113,50 @@ impl<'a> RawInput<'a> {
         }
     }
 
-    pub fn read_raw_float(&mut self) -> Result<f32> {
+    fn read_raw_float(&mut self) -> Result<f32> {
         let bytes = self.read_bytes(4)?;
         let f = byteorder::BigEndian::read_f32(bytes);
         Ok(f)
     }
 
-    pub fn read_raw_double(&mut self) -> Result<f64> {
+    fn read_raw_double(&mut self) -> Result<f64> {
         let bytes = self.read_bytes(8)?;
         let d = byteorder::BigEndian::read_f64(bytes);
         Ok(d)
+    }
+
+    pub fn read_double_code(&mut self, code: i8) -> Result<f64>{
+        match code as u8 {
+            codes::DOUBLE => {
+                self.read_raw_double()
+            }
+            codes::DOUBLE_0 => {
+                Ok(0.0)
+            }
+            codes::DOUBLE_1 => {
+                Ok(1.0)
+            }
+            _ => Err(Error::Syntax) // expected double, code//////////////////////////////
+        }
+    }
+
+    pub fn read_double(&mut self) -> Result<f64>{
+        let code = *self.read_u8()?;
+        self.read_double_code(code as i8)
+    }
+
+    pub fn read_float_code(&mut self, code: i8) -> Result<f32>{
+        match code as u8 {
+            codes::FLOAT => {
+                self.read_raw_float()
+            }
+            _ => Err(Error::Syntax) // expected float, code////////////////////////////////
+        }
+    }
+
+    pub fn read_float(&mut self) -> Result<f32>{
+        let code = *self.read_u8()?;
+        self.read_float_code(code as i8)
     }
 
 }
@@ -242,32 +276,45 @@ mod test {
     #[test]
     fn read_floats_test (){
         // {:form "(float 32.2)", :bytes [-7 66 0 -52 -51], :ubytes [249 66 0 204 205], :byte-count 5, :footer false, :value 32.2}
-        let data: Vec<u8> = vec![66, 0, 204, 205];
+        let data: Vec<u8> = vec![249, 66, 0, 204, 205];
         let mut rdr = RawInput::from_vec(&data);
-        assert_eq!(Ok(32.2), rdr.read_raw_float());
+        assert_eq!(Ok(32.2), rdr.read_float());
 
         // {:form "(float Float/MIN_VALUE)", :bytes [-7 0 0 0 1], :ubytes [249 0 0 0 1], :byte-count 5, :footer false, :value 1.4E-45}
-        let data: Vec<u8> = vec![0, 0, 0, 1];
+        let data: Vec<u8> = vec![249, 0, 0, 0, 1];
         let mut rdr = RawInput::from_vec(&data);
-        assert_eq!(Ok(1.4E-45), rdr.read_raw_float());
+        assert_eq!(Ok(1.4E-45), rdr.read_float());
 
         // {:form "(float Float/MAX_VALUE)", :bytes [-7 127 127 -1 -1], :ubytes [249 127 127 255 255], :byte-count 5, :footer false, :value 3.4028235E38}
-        let data: Vec<u8> = vec![127, 127, 255, 255];
+        let data: Vec<u8> = vec![249, 127, 127, 255, 255];
         let mut rdr = RawInput::from_vec(&data);
-        assert_eq!(Ok(3.4028235E38), rdr.read_raw_float());
+        assert_eq!(Ok(3.4028235E38), rdr.read_float());
+
 
         // {:form "(java.lang.Double. 4.9E-324)", :bytes [-6 0 0 0 0 0 0 0 1], :ubytes [250 0 0 0 0 0 0 0 1], :byte-count 9, :footer false, :value 4.9E-324}
-        let data: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1];
+        let data: Vec<u8> = vec![250, 0, 0, 0, 0, 0, 0, 0, 1];
         let mut rdr = RawInput::from_vec(&data);
         let control: f64 = 4.9E-324;
-        assert_eq!(Ok(control), rdr.read_raw_double());
-
+        assert_eq!(Ok(control), rdr.read_double());
 
         // {:form "9.8461319849314E10", :bytes [-6 66 54 -20 -64 -126 -87 80 98], :ubytes [250 66 54 236 192 130 169 80 98], :byte-count 9, :footer false, :value 9.8461319849314E10}
-        let data: Vec<u8> = vec![66, 54, 236, 192, 130, 169, 80, 98];
+        let data: Vec<u8> = vec![250, 66, 54, 236, 192, 130, 169, 80, 98];
         let mut rdr = RawInput::from_vec(&data);
         let control: f64 = 9.8461319849314E10;
-        assert_eq!(Ok(control), rdr.read_raw_double());
+        assert_eq!(Ok(control), rdr.read_double());
+
+        // {:form "0.0", :bytes [-5], :ubytes [251], :byte-count 1, :footer false, :value 0.0}
+        let data: Vec<u8> = vec![251];
+        let mut rdr = RawInput::from_vec(&data);
+        let control: f64 = 0.0;
+        assert_eq!(Ok(control), rdr.read_double());
+
+        // {:form "1.0", :bytes [-4], :ubytes [252], :byte-count 1, :footer false, :value 1.0}
+        let data: Vec<u8> = vec![252];
+        let mut rdr = RawInput::from_vec(&data);
+        let control: f64 = 1.0;
+        assert_eq!(Ok(control), rdr.read_double());
+
     }
 
 
