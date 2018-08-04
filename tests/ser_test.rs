@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use serde::Serialize;
 
 use serde_fressian::ser::{Serializer};
-// use serde_fressian::de::{Deserializer};
+use serde_fressian::de::{Deserializer};
 
 #[test]
 fn test_reset(){
@@ -127,18 +127,38 @@ fn list_test(){
 }
 
 
-fn read_count(bytes: Vec<u8>, offset: usize){
 
-}
+const MAP: u8 = 0xC0; //192
+const LIST_PACKED_LENGTH_START: u8 = 0xE4; //228
+const LIST: u8 = 0xEC; //236
 
-//set iter has notdet ordering
-fn map_bytes_eq(a: Vec<u8>, b:Vec<u8>) {
-
-    assert_eq!(&a[0], &b[0]);
+// hashmap iter has notdet ordering, so cannot compare bytes
+// need to unpack manually
+fn assert_map_eq(a: &Vec<u8>, b: &Vec<u8>, count: i32) {
+    let mut rdr_a = Deserializer::from_vec(a);
+    let mut rdr_b = Deserializer::from_vec(b);
 
     // check map flag
-    // check count
+    assert_eq!(rdr_a.read_next_code().unwrap(), MAP as i8);
+    assert_eq!(rdr_b.read_next_code().unwrap(), MAP as i8);
+
+    let expected_list_signal: i8 = match count {
+        0..=8 => {
+            (LIST_PACKED_LENGTH_START + count as u8) as i8
+        }
+        _ => LIST as i8
+    };
+
+    // check LIST flag
+    assert_eq!(rdr_a.read_next_code().unwrap(), expected_list_signal);
+    assert_eq!(rdr_b.read_next_code().unwrap(), expected_list_signal);
+
+    if  expected_list_signal == LIST {
+        // check count
+    };
+
     // pair off rest as map entry tuples, put in sets and compare
+
 }
 
 #[test]
@@ -157,16 +177,18 @@ fn map_test() {
 
     fw.reset();
 
-    // let mut m: HashMap<String, u8> = HashMap::new();
-    // m.insert("a".to_string(), 0);
-    // m.insert("b".to_string(), 1);
-    // #[cfg(not(raw_UTF8))]
-    // let control: Vec<u8> = vec![192,232,219,97,0,219,98,1];
-    // #[cfg(raw_UTF8)]
-    // let control: Vec<u8> = vec![192, 232, 191, 1, 97, 0, 191, 1, 98, 1];
-    // fw.write_map(&m).unwrap();
-    // let buf = fw.to_vec();
+    let mut m: HashMap<String, u8> = HashMap::new();
+    m.insert("a".to_string(), 0);
+    m.insert("b".to_string(), 1);
+    #[cfg(not(raw_UTF8))]
+    let control: Vec<u8> = vec![192,232,219,97,0,219,98,1];
+    #[cfg(raw_UTF8)]
+    let control: Vec<u8> = vec![192, 232, 191, 1, 97, 0, 191, 1, 98, 1];
+    fw.write_map(&m).unwrap();
+    let buf = fw.to_vec();
     // assert_eq!(&buf, &control);
+
+    assert_map_eq(&buf, &control, 4);
 
 }
 
