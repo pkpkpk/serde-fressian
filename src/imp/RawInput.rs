@@ -113,6 +113,14 @@ impl<'a> RawInput<'a> {
         }
     }
 
+    fn read_i32(&mut self) -> Result<i32>{
+        Ok(self.read_int()? as i32)
+    }
+
+    pub fn read_count(&mut self) -> Result<i32>{ //////// coercion to i32 seems pointlessly complicated
+        self.read_i32()
+    }
+
     fn read_raw_float(&mut self) -> Result<f32> {
         let bytes = self.read_bytes(4)?;
         let f = byteorder::BigEndian::read_f32(bytes);
@@ -136,27 +144,44 @@ impl<'a> RawInput<'a> {
             codes::DOUBLE_1 => {
                 Ok(1.0)
             }
-            _ => Err(Error::Syntax) // expected double, code//////////////////////////////
+            _ => Err(Error::Syntax) // expected double, code///////////////////////////////////////
         }
     }
 
-    pub fn read_double(&mut self) -> Result<f64>{
+    pub fn read_double(&mut self) -> Result<f64> {
         let code = *self.read_u8()?;
         self.read_double_code(code as i8)
     }
 
-    pub fn read_float_code(&mut self, code: i8) -> Result<f32>{
+    pub fn read_float_code(&mut self, code: i8) -> Result<f32> {
         match code as u8 {
             codes::FLOAT => {
                 self.read_raw_float()
             }
-            _ => Err(Error::Syntax) // expected float, code////////////////////////////////
+            _ => Err(Error::Syntax) // expected float, code////////////////////////////////////////
         }
     }
 
-    pub fn read_float(&mut self) -> Result<f32>{
+    pub fn read_float(&mut self) -> Result<f32> {
         let code = *self.read_u8()?;
         self.read_float_code(code as i8)
+    }
+
+    pub fn read_boolean_code(&mut self, code: i8) -> Result<bool> {
+        match code as u8 {
+            codes::TRUE => {
+                Ok(true)
+            },
+            codes::FALSE => {
+                Ok(false)
+            }
+            _ => Err(Error::Syntax) // expected boolean, code//////////////////////////////////////
+        }
+    }
+
+    pub fn read_boolean(&mut self) -> Result<bool> {
+        let code = self.read_i8()?;
+        self.read_boolean_code(code)
     }
 
 }
@@ -315,6 +340,19 @@ mod test {
         let control: f64 = 1.0;
         assert_eq!(Ok(control), rdr.read_double());
 
+    }
+
+    #[test]
+    fn read_boolean_test() {
+        // {:form "true", :bytes [-11], :ubytes [245], :byte-count 1, :footer false, :value true}
+        let data: Vec<u8> = vec![245];
+        let mut rdr = RawInput::from_vec(&data);
+        assert_eq!(Ok(true), rdr.read_boolean());
+
+        // {:form "false", :bytes [-10], :ubytes [246], :byte-count 1, :footer false, :value false}
+        let data: Vec<u8> = vec![246];
+        let mut rdr = RawInput::from_vec(&data);
+        assert_eq!(Ok(false), rdr.read_boolean());
     }
 
 
