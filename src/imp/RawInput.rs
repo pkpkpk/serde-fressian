@@ -274,45 +274,19 @@ impl<'a> RawInput<'a> {
             let mut res: Result<()> = Ok(());
 
             while pos < length && res.is_ok() {
-                let ch = bytes[pos] & 0xff;
-                pos += 1;
-                match ch >> 4 {
-                    0..=7 => {
-                        dest.push(ch as char);
-                    }
-                    12 | 13 => {
-                        let ch0 = ch as u32;
-                        let ch1 = bytes[pos + 1] as u32 & 0xff;
-                        pos += 1;
-                        let n = ((ch0 & 0x1f as u32) << 6 | ch1 & 0x3f as u32);
+                match read_fressian_char(&bytes, &mut pos) {
+                    Ok(n) => {
                         match char::try_from(n) {
-                            Ok(c) => {
-                                dest.push(c);
+                            Ok(ch) => {
+                                dest.push(ch)
                             }
                             Err(_) => {
-                                res = Err(Error::Syntax); /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+                                res = Err(Error::Message("bad char => 12|13".to_string()));
                             }
                         }
                     }
-                    14 => {
-                        let ch0 = ch as u32;
-                        let ch1 = bytes[pos] as u32 & 0xff;
-                        let ch2 = bytes[pos + 1] as u32 & 0xff;
-                        pos += 2;
-                        let n = (  ( ch0 & 0x0f as u32) << 12
-                                 | ( ch1 & 0x3f as u32) << 6
-                                 | ( ch2 & 0x3f as u32));
-                        match char::try_from(n) {
-                            Ok(c) => {
-                                dest.push(c);
-                            }
-                            Err(_) => {
-                                res = Err(Error::Syntax); /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
-                            }
-                        }
-                    }
-                    _ => {
-                        res = Err(Error::Syntax); /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+                    Err(e) => {
+                        res = Err(e)
                     }
                 }
             };
@@ -321,6 +295,40 @@ impl<'a> RawInput<'a> {
 
     }
 
+}
+
+
+
+fn read_fressian_char(bytes: &&[u8], pos: &mut usize) -> Result<u32>{
+    let ch = bytes[*pos] & 0xff;
+    *pos += 1;
+    match ch >> 4 {
+        0..=7 => Ok(ch as u32)
+        12 | 13 => {
+            let ch0 = ch as u32;
+            let ch1 = bytes[*pos] as u32 & 0xff;
+            *pos += 1;
+            let n = ( (ch0 & 0x1f as u32) << 6 | (ch1 & 0x3f as u32));
+            Ok(n)
+        }
+        14 => {
+            let ch0 = ch as u32;
+            let ch1 = bytes[*pos] as u32;
+            let ch2 = bytes[*pos + 1] as u32;
+            *pos += 2;
+            let n: u32 =
+                    (
+                        // ((ch & 0x0f) as u32) << 12 | ((ch1 & 0x3f) as u32) << 6 | ((ch2 & 0x3f) as u32)
+                        // (ch0 & 0x0f) << 12 | (ch1 & 0x3f) << 6 | (ch2 & 0x3f)
+
+                        ((ch0 & 0x0f) << 12 | (ch1 & 0x3f) << 6 | ch2 & 0x3f)
+                    );
+            Ok(n)
+        }
+        _ => {
+            Err(Error::Syntax) /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -544,6 +552,27 @@ mod test {
         let control = "hola".to_string();
         let mut rdr = RawInput::from_vec(&data);
         assert_eq!(Ok(control), read_string(&mut rdr));
+
+        // {:form "\"é\"", :bytes [-35 101 -52 -127], :ubytes [221 101 204 129], :byte-count 4, :footer false, :value "é"}
+        let data: Vec<u8> = vec![221, 101, 204, 129];
+        let control = "é".to_string();
+        let mut rdr = RawInput::from_vec(&data);
+        assert_eq!(Ok(control), read_string(&mut rdr));
+
+        // {:value "❤️", :bytes [-32 -30 -99 -92 -17 -72 -113], :ubytes [224 226 157 164 239 184 143], :byte-count 7, :footer false}
+        let data: Vec<u8> = vec![224, 226, 157, 164, 239, 184, 143];
+        let control = "❤️".to_string();
+        let mut rdr = RawInput::from_vec(&data);
+        assert_eq!(Ok(control), read_string(&mut rdr));
+
+        // // {:value "😎", :bytes [-32 -19 -96 -67 -19 -72 -114], :ubytes [224 237 160 189 237 184 142], :byte-count 7, :footer false}
+        // let data: Vec<u8> = vec![224, 237, 160, 189, 237, 184, 142];
+        // let control = "😎".to_string();
+        // let mut rdr = RawInput::from_vec(&data);
+        // assert_eq!(Ok(control), read_string(&mut rdr));
+
+
+
 
         // let data: Vec<u8> = vec![227,60,101,204,129,226,157,164,239,184,143,195,159,226,132,157,230,157,177,228,186,172,230,157,177,228,186,172,237,160,189,237,184,137,32,237,160,189,237,184,142,32,237,160,190,237,180,148,32,237,160,189,237,184,144,32,237,160,189,237,185,132];
         // let control = "é❤️ßℝ東京東京😉 😎 🤔 😐 🙄".to_string();
