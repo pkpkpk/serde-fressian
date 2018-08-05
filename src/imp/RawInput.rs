@@ -264,56 +264,61 @@ impl<'a> RawInput<'a> {
     }
 
     pub fn read_fressian_string(&mut self, length: usize) -> Result<String> {
-        let bytes = self.read_raw_bytes(length)?;
-        let length = bytes.len();
-        let mut dest = String::with_capacity(length);
-        let mut pos = 0;
-        let mut res: Result<()> = Ok(());
+        if length == 0 {
+            Ok("".to_string())
+        } else {
+            let bytes = self.read_raw_bytes(length)?;
+            let length = bytes.len();
+            let mut dest = String::with_capacity(length);
+            let mut pos = 0;
+            let mut res: Result<()> = Ok(());
 
-        while pos < length && res.is_ok() {
-            let ch = bytes[pos] & 0xff;
-            pos += 1;
-            match ch >> 4 {
-                0..=7 => {
-                    dest.push(ch as char);
-                }
-                12 | 13 => {
-                    let ch0 = ch as u32;
-                    let ch1 = bytes[pos + 1] as u32 & 0xff;
-                    pos += 1;
-                    let n = ((ch0 & 0x1f as u32) << 6 | ch1 & 0x3f as u32);
-                    match char::try_from(n) {
-                        Ok(c) => {
-                            dest.push(c);
-                        }
-                        Err(_) => {
-                            res = Err(Error::Syntax); /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+            while pos < length && res.is_ok() {
+                let ch = bytes[pos] & 0xff;
+                pos += 1;
+                match ch >> 4 {
+                    0..=7 => {
+                        dest.push(ch as char);
+                    }
+                    12 | 13 => {
+                        let ch0 = ch as u32;
+                        let ch1 = bytes[pos + 1] as u32 & 0xff;
+                        pos += 1;
+                        let n = ((ch0 & 0x1f as u32) << 6 | ch1 & 0x3f as u32);
+                        match char::try_from(n) {
+                            Ok(c) => {
+                                dest.push(c);
+                            }
+                            Err(_) => {
+                                res = Err(Error::Syntax); /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+                            }
                         }
                     }
-                }
-                14 => {
-                    let ch0 = ch as u32;
-                    let ch1 = bytes[pos] as u32 & 0xff;
-                    let ch2 = bytes[pos + 1] as u32 & 0xff;
-                    pos += 2;
-                    let n = (  ( ch0 & 0x0f as u32) << 12
-                             | ( ch1 & 0x3f as u32) << 6
-                             | ( ch2 & 0x3f as u32));
-                    match char::try_from(n) {
-                        Ok(c) => {
-                            dest.push(c);
-                        }
-                        Err(_) => {
-                            res = Err(Error::Syntax); /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+                    14 => {
+                        let ch0 = ch as u32;
+                        let ch1 = bytes[pos] as u32 & 0xff;
+                        let ch2 = bytes[pos + 1] as u32 & 0xff;
+                        pos += 2;
+                        let n = (  ( ch0 & 0x0f as u32) << 12
+                                 | ( ch1 & 0x3f as u32) << 6
+                                 | ( ch2 & 0x3f as u32));
+                        match char::try_from(n) {
+                            Ok(c) => {
+                                dest.push(c);
+                            }
+                            Err(_) => {
+                                res = Err(Error::Syntax); /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+                            }
                         }
                     }
+                    _ => {
+                        res = Err(Error::Syntax); /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+                    }
                 }
-                _ => {
-                    res = Err(Error::Syntax); /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
-                }
-            }
-        };
-        res.and(Ok(dest))
+            };
+            res.and(Ok(dest))
+        }
+
     }
 
 }
@@ -529,12 +534,15 @@ mod test {
     #[test]
     fn read_fressian_string_test() {
 
+        let data: Vec<u8> = vec![218];
+        let control = "".to_string();
+        let mut rdr = RawInput::from_vec(&data);
+        assert_eq!(Ok(control), read_string(&mut rdr));
+
         // {:form "\"hola\"", :bytes [-34 104 111 108 97], :ubytes [222 104 111 108 97], :byte-count 5, :footer false, :value "hola"}
-        // let data: Vec<u8> = vec![104, 111, 108, 97]; //no code
-        let data: Vec<u8> = vec![222, 104, 111, 108, 97]; //no code
+        let data: Vec<u8> = vec![222, 104, 111, 108, 97];
         let control = "hola".to_string();
         let mut rdr = RawInput::from_vec(&data);
-        // assert_eq!(Ok(control), rdr.read_fressian_string(4));
         assert_eq!(Ok(control), read_string(&mut rdr));
 
         // let data: Vec<u8> = vec![227,60,101,204,129,226,157,164,239,184,143,195,159,226,132,157,230,157,177,228,186,172,230,157,177,228,186,172,237,160,189,237,184,137,32,237,160,189,237,184,142,32,237,160,190,237,180,148,32,237,160,189,237,184,144,32,237,160,189,237,185,132];
