@@ -113,6 +113,10 @@ impl<'a> RawInput<'a> {
         }
     }
 
+    pub fn read_next_code(&mut self) -> Result<i8> {
+        self.read_i8()
+    }
+
     fn read_i32(&mut self) -> Result<i32>{
         Ok(self.read_int()? as i32)
     }
@@ -183,6 +187,46 @@ impl<'a> RawInput<'a> {
         let code = self.read_i8()?;
         self.read_boolean_code(code)
     }
+
+    fn internal_read_bytes(&mut self, count: i32) -> Result<&[u8]> {
+        self.read_bytes(count as usize)
+    }
+
+    // have reconstruct in buffer, doesnt make sense to returns a slice of a new buffer
+    // so this returns a vec whereas read_bytes returns slice view on input.
+    fn internal_read_chunked_bytes(&mut self) -> Result<Vec<u8>> {
+        let mut buffer: Vec<u8> = Vec::with_capacity(65536);
+        let mut code: u8 = codes::BYTES_CHUNK;
+        while code == codes::BYTES_CHUNK {
+            let count = self.read_count()?;
+            buffer.extend_from_slice(self.internal_read_bytes(count)?);
+            code = self.read_next_code()? as u8;
+        }
+        if code != codes::BYTES {
+            Err(Error::Syntax)//expected conclusion of chunked bytes///////////////////////////////
+        } else {
+            // Ok(buffer.as_slice())
+            Ok(buffer)
+        }
+    }
+
+    // this will need to return some wrapper over &[u8] + vec<u8> to support chunked bytes
+    pub fn read_bytes_code(&mut self, code: i8) -> Result<&[u8]> {
+        match code as u8 {
+            codes::BYTES_PACKED_LENGTH_START..=codes::BYTES_PACKED_LENGTH_END => {
+                self.internal_read_bytes( (code as u8 - codes::BYTES_PACKED_LENGTH_START) as i32)
+            }
+            codes::BYTES => {
+                let count = self.read_count()?;
+                self.internal_read_bytes(count)
+            }
+            // codes::BYTES_CHUNK => {///////////////////////////////////////////////////////////////
+            //     self.internal_read_chunked_bytes()
+            // }
+            _ => Err(Error::Syntax) // expected bytes, code//////////////////////////////////////
+        }
+    }
+
 
 }
 
