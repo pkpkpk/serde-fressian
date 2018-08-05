@@ -5,9 +5,32 @@ use imp::error::{Error, Result};
 use imp::io::{ByteReader};
 use byteorder::*;
 
-pub type RawInput<'a> = ByteReader<'a>;
+pub struct RawInput<'a>  {
+    rdr: ByteReader<'a>
+}
 
 impl<'a> RawInput<'a> {
+    pub fn from_vec(v: &'a Vec<u8>) -> RawInput {
+        RawInput {
+            rdr: ByteReader::from_vec(v)
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.rdr.reset()
+    }
+
+    pub fn read_u8(&mut self) -> Result<&u8> {
+        self.rdr.read_u8()
+    }
+
+    pub fn read_i8(&mut self) -> Result<i8> {
+        self.rdr.read_i8()
+    }
+
+    fn read_raw_bytes(&mut self, length: usize) -> Result<&[u8]>{
+        self.rdr.read_bytes(length)
+    }
 
     fn read_raw_i16(&mut self) -> Result<i64> {
         let high = *self.read_u8()? as i64;
@@ -108,7 +131,7 @@ impl<'a> RawInput<'a> {
                 self.read_raw_i64()
             }
             _ => {
-                Err(Error::Syntax) // "expected i64..."
+                Err(Error::Syntax) // "expected i64..."///////////////////////////////////////////
             }
         }
     }
@@ -126,13 +149,13 @@ impl<'a> RawInput<'a> {
     }
 
     fn read_raw_float(&mut self) -> Result<f32> {
-        let bytes = self.read_bytes(4)?;
+        let bytes = self.read_raw_bytes(4)?;
         let f = byteorder::BigEndian::read_f32(bytes);
         Ok(f)
     }
 
     fn read_raw_double(&mut self) -> Result<f64> {
-        let bytes = self.read_bytes(8)?;
+        let bytes = self.read_raw_bytes(8)?;
         let d = byteorder::BigEndian::read_f64(bytes);
         Ok(d)
     }
@@ -188,10 +211,6 @@ impl<'a> RawInput<'a> {
         self.read_boolean_code(code)
     }
 
-    fn internal_read_bytes(&mut self, count: i32) -> Result<&[u8]> {
-        self.read_bytes(count as usize)
-    }
-
     // have reconstruct in buffer, doesnt make sense to returns a slice of a new buffer
     // so this returns a vec whereas read_bytes returns slice view on input.
     fn internal_read_chunked_bytes(&mut self) -> Result<Vec<u8>> {
@@ -199,7 +218,7 @@ impl<'a> RawInput<'a> {
         let mut code: u8 = codes::BYTES_CHUNK;
         while code == codes::BYTES_CHUNK {
             let count = self.read_count()?;
-            buffer.extend_from_slice(self.internal_read_bytes(count)?);
+            buffer.extend_from_slice(self.read_raw_bytes(count as usize)?);
             code = self.read_next_code()? as u8;
         }
         if code != codes::BYTES {
@@ -214,17 +233,23 @@ impl<'a> RawInput<'a> {
     pub fn read_bytes_code(&mut self, code: i8) -> Result<&[u8]> {
         match code as u8 {
             codes::BYTES_PACKED_LENGTH_START..=codes::BYTES_PACKED_LENGTH_END => {
-                self.internal_read_bytes( (code as u8 - codes::BYTES_PACKED_LENGTH_START) as i32)
+                self.read_raw_bytes( (code as u8 - codes::BYTES_PACKED_LENGTH_START) as usize)
             }
             codes::BYTES => {
                 let count = self.read_count()?;
-                self.internal_read_bytes(count)
+                self.read_raw_bytes(count as usize)
             }
             // codes::BYTES_CHUNK => {///////////////////////////////////////////////////////////////
             //     self.internal_read_chunked_bytes()
             // }
             _ => Err(Error::Syntax) // expected bytes, code//////////////////////////////////////
         }
+    }
+
+    // this reads of the `fressian bytes` value type, not literal bytes from the reader.
+    pub fn read_bytes(&mut self) -> Result<&[u8]> {
+        let code = *self.read_u8()?;
+        self.read_bytes_code(code as i8)
     }
 
 
@@ -399,6 +424,22 @@ mod test {
         assert_eq!(Ok(false), rdr.read_boolean());
     }
 
+    #[test]
+    fn read_bytes_test() {
+        // {:form "(byte-array [-2 -1 0 1 2])", :bytes [-43 -2 -1 0 1 2], :ubytes [213 254 255 0 1 2], :byte-count 6, :footer false, :input [-2 -1 0 1 2]}
+        let data: Vec<u8> = vec![213, 254, 255, 0, 1, 2];
+        let control: &[u8] = &[254, 255, 0, 1, 2];
+        let mut rdr = RawInput::from_vec(&data);
+        assert_eq!(Ok(control), rdr.read_bytes());
 
+        // {:form "(byte-array [-4 -3 -2 -1 0 1 2 3 4])", :bytes [-39 9 -4 -3 -2 -1 0 1 2 3 4], :ubytes [217 9 252 253 254 255 0 1 2 3 4], :byte-count 11, :footer false, :input [-4 -3 -2 -1 0 1 2 3 4]}
+        // unpacked length
+        let data: Vec<u8> = vec![217, 9, 252, 253, 254, 255, 0, 1, 2, 3, 4];
+        let control: &[u8] = &[252, 253, 254, 255, 0, 1, 2, 3, 4];
+        let mut rdr = RawInput::from_vec(&data);
+        assert_eq!(Ok(control), rdr.read_bytes());
+
+        //missing packed bytes
+    }
 }
 
