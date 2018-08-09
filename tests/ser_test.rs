@@ -153,7 +153,7 @@ fn assert_map_eq(a: &Vec<u8>, b: &Vec<u8>, count: i32) {
     assert_eq!(rdr_a.read_next_code().unwrap(), expected_list_signal);
     assert_eq!(rdr_b.read_next_code().unwrap(), expected_list_signal);
 
-    if  expected_list_signal == LIST {
+    if  expected_list_signal == LIST as i8 {
         // check count
     };
 
@@ -190,5 +190,20 @@ fn map_test() {
 
     assert_map_eq(&buf, &control, 4);
 
+}
+
+use serde::de::{self, Deserialize};
+
+
+#[test]
+fn rt(){
+    let mut fw = Serializer::new();
+
+    let value = true;
+    &value.serialize(&mut fw).unwrap();
+
+    let mut rdr = Deserializer::from_vec(fw.get_ref());
+
+    assert_eq!(Ok(value), bool::deserialize(&mut rdr))
 }
 

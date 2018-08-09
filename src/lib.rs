@@ -1,5 +1,6 @@
 #![feature(extern_prelude)]
 #![feature(try_from)]
+#![feature(use_extern_macros)]
 
 #[macro_use]
 extern crate itertools;
