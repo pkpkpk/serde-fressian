@@ -118,28 +118,6 @@ impl<'a> Deserializer<'a> {
 // implement `deserialize_any` and `deserialize_ignored_any` are known as
 // self-describing.
 
-// /// Represents a JSON value
-#[derive(Clone, PartialEq, PartialOrd)]
-pub enum FressianValue {
-    Null,
-    Bool(bool),
-    Int(i64),
-    Float(f32),
-    Double(f32),
-    String(String),
-    // Str(&str),
-    // Array(Vec<Value>),
-    // Object(BTreeMap<String, Value>),
-}
-
-// const PACKED_LIST_RANGE: std::ops::RangeInclusive<u8> = {
-//     let end = codes::LIST_PACKED_LENGTH_START + 7;
-//     codes::LIST_PACKED_LENGTH_START..=end
-// }; 234
-
-const PACKED_LIST_RANGE: std::ops::RangeInclusive<u8> =  codes::LIST_PACKED_LENGTH_START..=235;
-
-
 impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     type Error = Error;
 
@@ -148,8 +126,6 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         V: Visitor<'de>,
     {
         let code = self.read_next_code()?;
-
-        println!("code: {}", code);
 
         match code as u8 {
             codes::NULL => {
@@ -202,15 +178,21 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
             codes::LIST_PACKED_LENGTH_START..=235 => {
                 let length = code as u8 - codes::LIST_PACKED_LENGTH_START;
-                println!("got codes::LIST_PACKED, length : {}", length);
-                visitor.visit_seq(ListReader::new(self, length as usize))
+                visitor.visit_seq(FixedListReader::new(self, length as usize))
             }
 
             codes::LIST => {
                 let length = self.rawIn.read_count()?;
-                println!("got codes::LIST, length : {}", length);
-                visitor.visit_seq(ListReader::new(self, length as usize))
+                visitor.visit_seq(FixedListReader::new(self, length as usize))
             }
+
+            // codes::BEGIN_CLOSED_LIST => {
+            //     visitor.visit_seq(ListReader::new(self, length as usize))
+            // }
+            //
+            // codes::BEGIN_OPEN_LIST => {
+            //     visitor.visit_seq(ListReader::new(self, length as usize))
+            // }
 
             //char
             //put cache, get cache, PRIORITY_CACHE_PACKED_START...
@@ -230,16 +212,17 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 }
 
 
-//need open/closed list reading
-struct ListReader<'a, 'de: 'a> {
+
+
+struct FixedListReader<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
     length: usize,
     items_read: usize
 }
 
-impl<'a, 'de> ListReader<'a, 'de> {
+impl<'a, 'de> FixedListReader<'a, 'de> {
     fn new(de: &'a mut Deserializer<'de>, length: usize) -> Self {
-        ListReader {
+        FixedListReader {
             de,
             length: length,
             items_read: 0,
@@ -252,7 +235,7 @@ impl<'a, 'de> ListReader<'a, 'de> {
 }
 
 
-impl<'de, 'a> SeqAccess<'de> for ListReader<'a, 'de> {
+impl<'de, 'a> SeqAccess<'de> for FixedListReader<'a, 'de> {
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
