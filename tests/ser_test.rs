@@ -70,6 +70,17 @@ fn de_test(){
     let control: Vec<Vec<i64>> = vec![vec![-3,-2,-1, 0, 1, 2, 3], vec![99, 100, 101]];
     let t: Vec<Vec<i64>> = serde_fressian::de::from_vec(&value).unwrap();
     assert_eq!(control, t);
+
+    ///////////////////////////////////////////////////////////////
+
+    //open list
+    // (write-as-open [-2 -1 0 1 2])
+    let value: Vec<u8> = vec![238,79,254,255,0,1,2];
+    let control: Vec<i64> = vec![-2,-1, 0, 1, 2];
+    let t: Vec<i64> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
+
+
 }
 
 #[test]

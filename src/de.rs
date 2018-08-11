@@ -99,10 +99,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             codes::BEGIN_CLOSED_LIST => {
                 visitor.visit_seq(ClosedListReader::new(self))
             }
-            //
-            // codes::BEGIN_OPEN_LIST => {
-            //     visitor.visit_seq(ListReader::new(self, length as usize))
-            // }
+
+            codes::BEGIN_OPEN_LIST => {
+                visitor.visit_seq(OpenListReader::new(self))
+            }
 
             //char
             //put cache, get cache, PRIORITY_CACHE_PACKED_START...
@@ -152,7 +152,6 @@ impl<'de, 'a> SeqAccess<'de> for FixedListReader<'a, 'de> {
     where
         T: DeserializeSeed<'de>,
     {
-        //only applicable for sized lists. open frame lists need separate logic
         if self.items_read >= self.length {
             Ok(None)
         } else {
@@ -184,7 +183,7 @@ impl<'de, 'a> SeqAccess<'de> for ClosedListReader<'a, 'de> {
         T: DeserializeSeed<'de>,
     {
         if self.finished {
-            Err(Error::Eof)
+            Err(Error::Message("attempted reading past list end".to_string()))
         } else if self.de.rawIn.peek_next_code()? as u8 == codes::END_COLLECTION{
             self.finished = true;
             let _ = self.de.read_next_code()?;
@@ -194,6 +193,52 @@ impl<'de, 'a> SeqAccess<'de> for ClosedListReader<'a, 'de> {
         }
     }
 }
+
+struct OpenListReader<'a, 'de: 'a> {
+    de: &'a mut Deserializer<'de>,
+    finished: bool
+}
+
+impl<'a, 'de> OpenListReader<'a, 'de> {
+    fn new(de: &'a mut Deserializer<'de>) -> Self {
+        OpenListReader { de, finished: false }
+    }
+}
+
+impl<'de, 'a> SeqAccess<'de> for OpenListReader<'a, 'de> {
+    type Error = Error;
+
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        if self.finished {
+            return Err(Error::Message("attempted reading past list end".to_string()))
+        };
+
+        let next_code = self.de.rawIn.peek_next_code();
+
+        match next_code {
+            Ok(code) => {
+                if code as u8 == codes::END_COLLECTION {
+                    self.finished = true;
+                    let _ = self.de.read_next_code()?;
+                    Ok(None)
+                } else {
+                    seed.deserialize(&mut *self.de).map(Some)
+                }
+            }
+            Err(Error::Eof) => {
+                self.finished = true;
+                Ok(None)
+            }
+            Err(err) => {
+                Err(err)
+            }
+        }
+    }
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
