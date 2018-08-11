@@ -132,6 +132,14 @@ pub enum FressianValue {
     // Object(BTreeMap<String, Value>),
 }
 
+// const PACKED_LIST_RANGE: std::ops::RangeInclusive<u8> = {
+//     let end = codes::LIST_PACKED_LENGTH_START + 7;
+//     codes::LIST_PACKED_LENGTH_START..=end
+// }; 234
+
+const PACKED_LIST_RANGE: std::ops::RangeInclusive<u8> =  codes::LIST_PACKED_LENGTH_START..=235;
+
+
 impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     type Error = Error;
 
@@ -141,11 +149,17 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     {
         let code = self.read_next_code()?;
 
+        println!("code: {}", code);
+
         match code as u8 {
+            codes::NULL => {
+                visitor.visit_unit()
+            }
+
             codes::TRUE | codes::FALSE => {
                 visitor.visit_bool(self.rawIn.read_boolean_code(code)?)
             }
-            codes::INT | 0x00..=0x7f => {
+            codes::INT | 0x00..=0x7f | 0xFF => {
                 visitor.visit_i64(self.rawIn.read_int_code(code)?)
             }
 
@@ -157,7 +171,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_f64(self.rawIn.read_double_code(code)?)
             }
 
-            codes::BYTES | codes::BYTES_PACKED_LENGTH_START..=codes::BYTES_PACKED_LENGTH_END => {
+            codes::BYTES | codes::BYTES_PACKED_LENGTH_START..=215 => {
                 visitor.visit_bytes(self.rawIn.read_bytes_code(code)?)
             }
 
@@ -165,7 +179,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             //     self.internal_read_chunked_bytes()
             // }
 
-            codes::STRING_PACKED_LENGTH_START..=codes::STRING_PACKED_LENGTH_END => {
+            codes::STRING_PACKED_LENGTH_START..=225 => {
                 let length = code as u8 - codes::STRING_PACKED_LENGTH_START;
                 visitor.visit_string(self.rawIn.read_fressian_string(length as usize)?)
             }
@@ -175,7 +189,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_string(self.rawIn.read_fressian_string(length as usize)?)
             }
 
-            // codes::STRING_CHUNK => {
+            // codes::STRING_CHUNK => {///////////////////////////////////////////////////////////////
             //
             // }
 
@@ -186,20 +200,89 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
             //////////////////////////////////////////////////////////////////////
 
+            codes::LIST_PACKED_LENGTH_START..=235 => {
+                let length = code as u8 - codes::LIST_PACKED_LENGTH_START;
+                println!("got codes::LIST_PACKED, length : {}", length);
+                visitor.visit_seq(ListReader::new(self, length as usize))
+            }
 
+            codes::LIST => {
+                let length = self.rawIn.read_count()?;
+                println!("got codes::LIST, length : {}", length);
+                visitor.visit_seq(ListReader::new(self, length as usize))
+            }
 
-
-
+            //char
             //put cache, get cache, PRIORITY_CACHE_PACKED_START...
 
-            _ => Err(Error::Syntax),
+            _ => Err(Error::UnmatchedCode(code as u8)),
         }
     }
 
     serde::forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf option unit unit_struct newtype_struct
+         seq
+         tuple
         tuple_struct map struct enum identifier ignored_any
+    }
+
+}
+
+
+//need open/closed list reading
+struct ListReader<'a, 'de: 'a> {
+    de: &'a mut Deserializer<'de>,
+    length: usize,
+    items_read: usize
+}
+
+impl<'a, 'de> ListReader<'a, 'de> {
+    fn new(de: &'a mut Deserializer<'de>, length: usize) -> Self {
+        ListReader {
+            de,
+            length: length,
+            items_read: 0,
+        }
+    }
+
+    fn inc_items_read(&mut self) {
+        self.items_read += 1;
     }
 }
 
+
+impl<'de, 'a> SeqAccess<'de> for ListReader<'a, 'de> {
+    type Error = Error;
+
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        //only applicable for sized lists. open frame lists need separate logic
+        if self.items_read >= self.length {
+            Ok(None)
+        } else {
+            match seed.deserialize(&mut *self.de) {
+                Ok(v) => {
+                    self.inc_items_read();
+                    Ok(Some(v))
+                }
+                Err(e) => {
+                    Err(e)
+                }
+            }
+        }
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+pub fn from_vec<'a, T>(v: &'a Vec<u8>) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    let mut deserializer = Deserializer::from_vec(v);
+    T::deserialize(&mut deserializer)
+}

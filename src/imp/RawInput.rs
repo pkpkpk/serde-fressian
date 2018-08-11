@@ -85,9 +85,9 @@ impl<'a> RawInput<'a> {
 
     pub fn read_int_code(&mut self, code: i8) -> Result<i64> {
         match code  {
-            // 0xFF => {
-            //     Ok(-1)
-            // },
+            0xFF => {
+                Ok(-1)
+            },
             // 0 to 63
             0x00..=0x3F => {
                 Ok((code & 0xFF) as i64)

@@ -243,8 +243,8 @@ impl<'a> ser::Serializer for &'a mut Serializer{
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
         match _len {
-            Some(n) => {
-                let length = 2 * _len.unwrap();
+            Some(l) => {
+                let length = 2 * l;
                 self.write_code(codes::MAP)?;
                 self.write_list_header(length)?;
                 Ok(self)

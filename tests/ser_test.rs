@@ -8,14 +8,55 @@
 extern crate serde_derive;
 extern crate serde;
 extern crate serde_bytes;
-
 extern crate serde_fressian;
 
 use std::collections::{HashMap, HashSet};
+use serde::de::{self, Deserialize};
 use serde::Serialize;
 
 use serde_fressian::ser::{Serializer};
-use serde_fressian::de::{Deserializer};
+use serde_fressian::de::{Deserializer, from_vec};
+
+
+
+#[test]
+fn de_test(){
+
+    //boolean
+    let mut fw = Serializer::new();
+    let value = true;
+    &value.serialize(&mut fw).unwrap();
+    let mut rdr = Deserializer::from_vec(fw.get_ref());
+    assert_eq!(Ok(value), bool::deserialize(&mut rdr));
+
+    /////////////////////////////////////////////////////////////
+
+    // packed list of numbers
+    // (api/write [0 1 2 3])
+    let value: Vec<u8> = vec![232,0,1,2,3];
+    let control: Vec<i64> = vec![0,1,2,3];
+    let t: Vec<i64> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
+
+    ///////////////////////////////////////////////////////////
+
+    // packed list of numbers, with -1
+    // (api/write [-1 0 1 2 3])
+    let value: Vec<u8> = vec![233,255,0,1,2,3];
+    let control: Vec<i64> = vec![-1, 0, 1, 2, 3];
+    let t: Vec<i64> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
+
+    ///////////////////////////////////////////////////////////
+
+    // unpacked list numbers
+    // (api/write [-4 -3 -2 -1 0 1 2 3 4])
+    let value: Vec<u8> = vec![236,9,79,252,79,253,79,254,255,0,1,2,3,4];
+    let control: Vec<i64> = vec![-4, -3, -2, -1, 0, 1, 2, 3, 4];
+    let t: Vec<i64> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
+
+}
 
 #[test]
 fn test_reset(){
@@ -190,20 +231,5 @@ fn map_test() {
 
     assert_map_eq(&buf, &control, 4);
 
-}
-
-use serde::de::{self, Deserialize};
-
-
-#[test]
-fn rt(){
-    let mut fw = Serializer::new();
-
-    let value = true;
-    &value.serialize(&mut fw).unwrap();
-
-    let mut rdr = Deserializer::from_vec(fw.get_ref());
-
-    assert_eq!(Ok(value), bool::deserialize(&mut rdr))
 }
 

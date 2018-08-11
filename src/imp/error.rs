@@ -10,6 +10,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     Message(String),
+    UnmatchedCode(u8),
     Eof,
     Syntax,
 }
