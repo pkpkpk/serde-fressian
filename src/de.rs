@@ -25,98 +25,8 @@ impl<'a> Deserializer<'a> {
         self.rawIn.read_next_code()
     }
 
-    pub fn read_int(&mut self) -> Result<i64> {
-        self.rawIn.read_int()
-    }
-
-    // pub fn read_int_code(&mut self, code: i8) -> Result<i64> {
-    //     self.rawIn.read_int_code(code)
-    // }
-
-    pub fn read_float(&mut self) -> Result<f32> {
-        self.rawIn.read_float()
-    }
-
-    pub fn read_double(&mut self) -> Result<f64> {
-        self.rawIn.read_double()
-    }
-
 }
 
-
-
-// Deserialization refers to mapping that JSON value into Serde's data
-// model by invoking one of the `Visitor` methods. In the case of JSON and
-// bool that mapping is straightforward so the distinction may seem silly,
-// but in other cases Deserializers sometimes perform non-obvious mappings.
-// For example the TOML format has a Datetime type and Serde's data model
-// does not. In the `toml` crate, a Datetime in the input is deserialized by
-// mapping it to a Serde data model "struct" type with a special name and a
-// single field containing the Datetime represented as a string.
-
-// Refer to the "Understanding deserializer lifetimes" page for information
-// about the three deserialization flavors of strings in Serde.
-
-// An absent optional is represented as the JSON `null` and a present
-// optional is represented as just the contained value.
-//
-// As commented in `Serializer` implementation, this is a lossy
-// representation. For example the values `Some(())` and `None` both
-// serialize as just `null`. Unfortunately this is typically what people
-// expect when working with JSON. Other formats are encouraged to behave
-// more intelligently if possible.
-
-// In Serde, unit means an anonymous value containing no data.
-
-// Unit struct means a named value containing no data.
-
-// As is done here, serializers are encouraged to treat newtype structs as
-// insignificant wrappers around the data they contain. That means not
-// parsing anything other than the contained value.
-
-// Deserialization of compound types like sequences and maps happens by
-// passing the visitor an "Access" object that gives it the ability to
-// iterate through the data contained in the sequence.
-
-// Tuples look just like sequences in JSON. Some formats may be able to
-// represent tuples more efficiently.
-//
-// As indicated by the length parameter, the `Deserialize` implementation
-// for a tuple in the Serde data model is required to know the length of the
-// tuple before even looking at the input data.
-
-// Tuple structs look just like sequences in JSON.
-
-//deserialize_map
-// Much like `deserialize_seq` but calls the visitors `visit_map` method
-// with a `MapAccess` implementation, rather than the visitor's `visit_seq`
-// method with a `SeqAccess` implementation.
-
-//fn deserialize_struct
-// Structs look just like maps in JSON.
-//
-// Notice the `fields` parameter - a "struct" in the Serde data model means
-// that the `Deserialize` implementation is required to know what the fields
-// are before even looking at the input data. Any key-value pairing in which
-// the fields cannot be known ahead of time is probably a map.
-
-// An identifier in Serde is the type that identifies a field of a struct or
-// the variant of an enum. In JSON, struct fields and enum variants are
-// represented as strings. In other formats they may be represented as
-// numeric indices.
-
-//fn deserialize_ignored_any
-// Like `deserialize_any` but indicates to the `Deserializer` that it makes
-// no difference which `Visitor` method is called because the data is
-// ignored.
-//
-// Some deserializers are able to implement this more efficiently than
-// `deserialize_any`, for example by rapidly skipping over matched
-// delimiters without paying close attention to the data in between.
-//
-// Some formats are not able to implement this at all. Formats that can
-// implement `deserialize_any` and `deserialize_ignored_any` are known as
-// self-describing.
 
 impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     type Error = Error;
@@ -246,15 +156,11 @@ impl<'de, 'a> SeqAccess<'de> for FixedListReader<'a, 'de> {
         if self.items_read >= self.length {
             Ok(None)
         } else {
-            match seed.deserialize(&mut *self.de) {
-                Ok(v) => {
+            seed.deserialize(&mut *self.de)
+                .and_then(|v|{
                     self.inc_items_read();
                     Ok(Some(v))
-                }
-                Err(e) => {
-                    Err(e)
-                }
-            }
+                })
         }
     }
 }
@@ -284,14 +190,7 @@ impl<'de, 'a> SeqAccess<'de> for ClosedListReader<'a, 'de> {
             let _ = self.de.read_next_code()?;
             Ok(None)
         } else {
-            match seed.deserialize(&mut *self.de) {
-                Ok(v) => {
-                    Ok(Some(v))
-                }
-                Err(e) => {
-                    Err(e)
-                }
-            }
+            seed.deserialize(&mut *self.de).map(Some)
         }
     }
 }
