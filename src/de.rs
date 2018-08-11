@@ -186,9 +186,9 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_seq(FixedListReader::new(self, length as usize))
             }
 
-            // codes::BEGIN_CLOSED_LIST => {
-            //     visitor.visit_seq(ListReader::new(self, length as usize))
-            // }
+            codes::BEGIN_CLOSED_LIST => {
+                visitor.visit_seq(ClosedListReader::new(self))
+            }
             //
             // codes::BEGIN_OPEN_LIST => {
             //     visitor.visit_seq(ListReader::new(self, length as usize))
@@ -249,6 +249,43 @@ impl<'de, 'a> SeqAccess<'de> for FixedListReader<'a, 'de> {
             match seed.deserialize(&mut *self.de) {
                 Ok(v) => {
                     self.inc_items_read();
+                    Ok(Some(v))
+                }
+                Err(e) => {
+                    Err(e)
+                }
+            }
+        }
+    }
+}
+
+struct ClosedListReader<'a, 'de: 'a> {
+    de: &'a mut Deserializer<'de>,
+    finished: bool
+}
+
+impl<'a, 'de> ClosedListReader<'a, 'de> {
+    fn new(de: &'a mut Deserializer<'de>) -> Self {
+        ClosedListReader { de, finished: false }
+    }
+}
+
+impl<'de, 'a> SeqAccess<'de> for ClosedListReader<'a, 'de> {
+    type Error = Error;
+
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        if self.finished {
+            Err(Error::Eof)
+        } else if self.de.rawIn.peek_next_code()? as u8 == codes::END_COLLECTION{
+            self.finished = true;
+            let _ = self.de.read_next_code()?;
+            Ok(None)
+        } else {
+            match seed.deserialize(&mut *self.de) {
+                Ok(v) => {
                     Ok(Some(v))
                 }
                 Err(e) => {

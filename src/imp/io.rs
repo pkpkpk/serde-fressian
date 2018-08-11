@@ -48,6 +48,18 @@ impl<'a> ByteReader<'a>{
         }
     }
 
+    pub fn peek_u8(&mut self) -> Result<&u8> { /////// change to just return byte
+        match self.input.get(self.bytes_read) {
+            Some(byte) => {
+                // self.notify_bytes_read(1);
+                Ok(byte)
+            }
+            None => {
+                Err(Error::Eof)
+            }
+        }
+    }
+
     pub fn read_i8(&mut self) -> Result<i8> {
         match self.input.get(self.bytes_read) {
             Some(byte) => {

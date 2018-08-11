@@ -22,7 +22,7 @@ use serde_fressian::de::{Deserializer, from_vec};
 #[test]
 fn de_test(){
 
-    //boolean
+    // boolean
     let mut fw = Serializer::new();
     let value = true;
     &value.serialize(&mut fw).unwrap();
@@ -56,6 +56,20 @@ fn de_test(){
     let t: Vec<i64> = serde_fressian::de::from_vec(&value).unwrap();
     assert_eq!(control, t);
 
+    ///////////////////////////////////////////////////////////////
+
+    //closed list
+    // (write-as-closed [-3 -2 -1 0 1 2 3])
+    let value: Vec<u8> = vec![237,79,253,79,254,255,0,1,2,3,253];
+    let control: Vec<i64> = vec![-3,-2,-1, 0, 1, 2, 3];
+    let t: Vec<i64> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
+
+    //test if END_COLLECTION check for ClosedListReader works
+    let value: Vec<u8> =vec![230,237,79,253,79,254,255,0,1,2,3,253,231,80,99,80,100,80,101];
+    let control: Vec<Vec<i64>> = vec![vec![-3,-2,-1, 0, 1, 2, 3], vec![99, 100, 101]];
+    let t: Vec<Vec<i64>> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
 }
 
 #[test]

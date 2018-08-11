@@ -141,6 +141,10 @@ impl<'a> RawInput<'a> {
         self.read_i8()
     }
 
+    pub fn peek_next_code(&mut self) -> Result<i8> {
+        Ok( *self.rdr.peek_u8()? as i8)
+    }
+
     fn read_i32(&mut self) -> Result<i32>{
         Ok(self.read_int()? as i32)
     }
