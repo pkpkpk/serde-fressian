@@ -104,6 +104,41 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_seq(OpenListReader::new(self))
             }
 
+            //////////////////////////////////////////////////////////////////////
+
+            codes::MAP => {
+                let list_code = self.read_next_code()?;
+                println!("MAP, list-code: {}", list_code as u8);
+                match list_code as u8 {
+                    codes::LIST_PACKED_LENGTH_START..=235 => {
+                        let length = list_code as u8 - codes::LIST_PACKED_LENGTH_START;
+                        println!("  MAP ===> list length packed: {}", length);
+                        visitor.visit_map(FixedListReader::new(self, length as usize))
+                    }
+
+                    codes::LIST => {
+                        let length = self.rawIn.read_count()?;
+                        println!("  MAP ===> list length unpacked: {}", length);
+                        visitor.visit_map(FixedListReader::new(self, length as usize))
+                    }
+
+                    // codes::BEGIN_CLOSED_LIST => {
+                    //     visitor.visit_map(ClosedListReader::new(self))
+                    // }
+
+                    // codes::BEGIN_OPEN_LIST => {
+                    //     visitor.visit_map(OpenListReader::new(self))
+                    // }
+                    _ => {
+                        Err(Error::Message("malformed list body of MAP".to_string()))
+                    }
+                }
+
+            }
+
+
+
+            //////////////////////////////////////////////////////////////////////
             //char
             //put cache, get cache, PRIORITY_CACHE_PACKED_START...
 
@@ -163,6 +198,38 @@ impl<'de, 'a> SeqAccess<'de> for FixedListReader<'a, 'de> {
         }
     }
 }
+
+// `MapAccess` is provided to the `Visitor` to give it the ability to iterate
+// through entries of the map.
+impl<'de, 'a> MapAccess<'de> for FixedListReader<'a, 'de> {
+    type Error = Error;
+
+    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
+    where
+        K: DeserializeSeed<'de>,
+    {
+        self.next_element_seed(seed)
+    }
+
+    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value>
+    where
+        V: DeserializeSeed<'de>,
+    {
+        match self.next_element_seed(seed) {
+            Ok(Some(v)) => {
+                Ok(v)
+            }
+            Ok(None) => {
+                Err(Error::Message("premature EOF when trying to deserialize map value".to_string()))
+            }
+            Err(err) => {
+                Err(err)
+            }
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct ClosedListReader<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
@@ -238,6 +305,9 @@ impl<'de, 'a> SeqAccess<'de> for OpenListReader<'a, 'de> {
         }
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 
 

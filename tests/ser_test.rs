@@ -80,6 +80,16 @@ fn de_test(){
     let t: Vec<i64> = serde_fressian::de::from_vec(&value).unwrap();
     assert_eq!(control, t);
 
+    ///////////////////////////////////////////////////////////////
+
+    //map
+    //(api/write {"foo" "bar"})
+    let value: Vec<u8> = vec![192,230,221,102,111,111,221,98,97,114];
+    let mut control: HashMap<String,String> = HashMap::new();
+    control.insert("foo".to_string(), "bar".to_string());
+    let t: HashMap<String,String> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
+
 
 }
 
