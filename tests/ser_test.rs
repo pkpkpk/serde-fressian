@@ -101,6 +101,26 @@ fn de_test(){
     let t: HashMap<String,String> = serde_fressian::de::from_vec(&value).unwrap();
     assert_eq!(control, t);
 
+    ////////////////////////////////////////////////////////////////////
+
+    //set (api/write #{"thom" "jonny" "phil" "colin" "ed"})
+    let value: Vec<u8> = vec![193,233,223,99,111,108,105,110,220,101,100,222,116,104,111,109,223,106,111,110,110,121,222,112,104,105,108];
+    let mut control: HashSet<String> = HashSet::new();
+    control.insert("thom".to_string());
+    control.insert("jonny".to_string());
+    control.insert("phil".to_string());
+    control.insert("colin".to_string());
+    control.insert("ed".to_string());
+    let t: HashSet<String> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
+
+    ////////////////////////////////////////////////////////////////////
+
+    // (write-as-closed #{"thom" "jonny" "phil" "colin" "ed"})
+    let value: Vec<u8> = vec![193,237,223,99,111,108,105,110,220,101,100,222,116,104,111,109,223,106,111,110,110,121,222,112,104,105,108,253];
+    let t: HashSet<String> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
+
 }
 
 #[test]

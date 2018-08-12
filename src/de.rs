@@ -108,17 +108,14 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
             codes::MAP => {
                 let list_code = self.read_next_code()?;
-                println!("MAP, list-code: {}", list_code as u8);
                 match list_code as u8 {
                     codes::LIST_PACKED_LENGTH_START..=235 => {
                         let length = list_code as u8 - codes::LIST_PACKED_LENGTH_START;
-                        println!("  MAP ===> list length packed: {}", length);
                         visitor.visit_map(FixedListReader::new(self, length as usize))
                     }
 
                     codes::LIST => {
                         let length = self.rawIn.read_count()?;
-                        println!("  MAP ===> list length unpacked: {}", length);
                         visitor.visit_map(FixedListReader::new(self, length as usize))
                     }
 
@@ -129,11 +126,38 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                     // codes::BEGIN_OPEN_LIST => {
                     //     visitor.visit_map(OpenListReader::new(self))
                     // }
+
                     _ => {
-                        Err(Error::Message("malformed list body of MAP".to_string()))
+                        Err(Error::Message("malformed LIST body of MAP".to_string()))
                     }
                 }
+            }
 
+            codes::SET => {
+                let list_code = self.read_next_code()?;
+                match list_code as u8 {
+                    codes::LIST_PACKED_LENGTH_START..=235 => {
+                        let length = list_code as u8 - codes::LIST_PACKED_LENGTH_START;
+                        visitor.visit_seq(FixedListReader::new(self, length as usize))
+                    }
+
+                    codes::LIST => {
+                        let length = self.rawIn.read_count()?;
+                        visitor.visit_seq(FixedListReader::new(self, length as usize))
+                    }
+
+                    codes::BEGIN_CLOSED_LIST => {
+                        visitor.visit_seq(ClosedListReader::new(self))
+                    }
+
+                    // codes::BEGIN_OPEN_LIST => {
+                    //     visitor.visit_map(OpenListReader::new(self))
+                    // }
+
+                    _ => {
+                        Err(Error::Message("malformed LIST body of SET".to_string()))
+                    }
+                }
             }
 
 
@@ -333,11 +357,6 @@ impl<'de, 'a> SeqAccess<'de> for OpenListReader<'a, 'de> {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
