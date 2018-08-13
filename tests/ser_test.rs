@@ -149,12 +149,10 @@ fn test_reset(){
     let v: Vec<i64> = vec![-2, -1, 0, 1, 2];
     let control: Vec<u8> = vec![233,79,254,255,0,1,2];
     fw.write_list(&v).unwrap();
-    let buf = fw.to_vec();
-    assert_eq!(&buf, &control);
+    assert_eq!(fw.to_vec(), control);
     fw.reset();
     let control: Vec<u8> = vec![];
-    let buf = fw.to_vec();
-    assert_eq!(&buf, &control);
+    assert_eq!(fw.to_vec(), control);
 }
 
 
@@ -167,19 +165,19 @@ fn bytes_serialization_test(){
     let v: Vec<u8> = vec![255,254,253,0,1,2,3];
     let control: Vec<u8> = vec![215,255,254,253,0,1,2,3];
     fw.write_bytes(&v, 0, v.len()).unwrap();
-    assert_eq!(&fw.to_vec(), &control);
+    assert_eq!(fw.to_vec(), control);
     fw.reset();
     fw.write_bytes(v.as_slice(), 0, v.len()).unwrap();
-    assert_eq!(&fw.to_vec(), &control);
+    assert_eq!(fw.to_vec(), control);
     //---   unpacked length
     let v: Vec<u8> = vec![252,253,254,255,0,1,2,3,4];
     let control: Vec<u8> = vec![217, 9, 252, 253, 254, 255, 0, 1, 2, 3, 4];
     fw.reset();
     fw.write_bytes(&v, 0, v.len()).unwrap();
-    assert_eq!(&fw.to_vec(), &control);
+    assert_eq!(fw.to_vec(), control);
     fw.reset();
     fw.write_bytes(v.as_slice(), 0, v.len()).unwrap();
-    assert_eq!(&fw.to_vec(), &control);
+    assert_eq!(fw.to_vec(), control);
 
     //// I have no idea why this doesnt work
     // fw.reset();
@@ -208,12 +206,10 @@ fn list_test(){
     let v: Vec<i64> = vec![-2, -1, 0, 1, 2];
     let control: Vec<u8> = vec![233,79,254,255,0,1,2];
     fw.write_list(&v).unwrap();
-    let buf = fw.to_vec();
-    assert_eq!(&buf, &control);
+    assert_eq!(fw.to_vec(), control);
     fw.reset();
     &v.serialize(&mut fw);
-    let buf = fw.to_vec();
-    assert_eq!(&buf, &control);
+    assert_eq!(fw.to_vec(), control);
 
     fw.reset();
 
@@ -224,12 +220,10 @@ fn list_test(){
     let control: Vec<u8> = vec![236,9,191,1,105,191,2,97,109,191,1,97,191,10,114,101,97,115,111,110,97,98,108,101,191,3,109,97,110,191,3,103,101,116,191,3,111,102,102,191,2,109,121,191,4,99,97,115,101];
 
     fw.write_list(&v).unwrap();
-    let buf = fw.to_vec();
-    assert_eq!(&buf, &control);
+    assert_eq!(fw.to_vec(), control);
     fw.reset();
     &v.serialize(&mut fw);
-    let buf = fw.to_vec();
-    assert_eq!(&buf, &control);
+    assert_eq!(fw.to_vec(), control);
 
     fw.reset();
 
@@ -242,13 +236,11 @@ fn list_test(){
     #[cfg(raw_UTF8)]
     let control: Vec<u8> = vec![231,229,191,4,115,111,109,101,229,191,6,110,101,115,116,101,100,229,191,4,115,104,105,116];
     fw.write_list(&v).unwrap();
-    let buf = fw.to_vec();
-    assert_eq!(&buf, &control);
+    assert_eq!(fw.to_vec(), control);
 
     fw.reset();
     &v.serialize(&mut fw);
-    let buf = fw.to_vec();
-    assert_eq!(&buf, &control);
+    assert_eq!(fw.to_vec(), control);
 }
 
 
@@ -290,26 +282,25 @@ fn assert_map_eq(a: &Vec<u8>, b: &Vec<u8>, count: i32) {
 fn map_test() {
     let mut fw = Serializer::new();
 
-    let mut m: HashMap<String, u8> = HashMap::new();
-    m.insert("a".to_string(), 0);
+    let mut map: HashMap<String, u8> = HashMap::new();
+    map.insert("a".to_string(), 0);
     #[cfg(not(raw_UTF8))]
     let control: Vec<u8> = vec![192,230,219,97,0];
     #[cfg(raw_UTF8)]
     let control: Vec<u8> = vec![192, 230, 191, 1, 97, 0];
-    fw.write_map(&m).unwrap();
-    let buf = fw.to_vec();
-    assert_eq!(&buf, &control);
+    map.serialize(&mut fw);
+    assert_eq!(fw.to_vec(), control);
 
     fw.reset();
 
-    let mut m: HashMap<String, u8> = HashMap::new();
-    m.insert("a".to_string(), 0);
-    m.insert("b".to_string(), 1);
+    let mut map: HashMap<String, u8> = HashMap::new();
+    map.insert("a".to_string(), 0);
+    map.insert("b".to_string(), 1);
     #[cfg(not(raw_UTF8))]
     let control: Vec<u8> = vec![192,232,219,97,0,219,98,1];
     #[cfg(raw_UTF8)]
     let control: Vec<u8> = vec![192, 232, 191, 1, 97, 0, 191, 1, 98, 1];
-    fw.write_map(&m).unwrap();
+    map.serialize(&mut fw);
     let buf = fw.to_vec();
     // assert_eq!(&buf, &control);
 
