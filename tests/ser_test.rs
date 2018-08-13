@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use serde::de::{self, Deserialize};
 use serde::Serialize;
 
-use serde_fressian::ser::{Serializer};
+use serde_fressian::ser::{Serializer, FressianWriter};
 use serde_fressian::de::{Deserializer, from_vec};
 
 
@@ -133,6 +133,13 @@ fn de_test(){
     // assert_eq!(dt.to_string(), "2018-08-13T02:20:05.875-00:00");
     // couldnt figure out fff in "yyyy-mm-ddThh:mm:ss.fff+hh:mm"
     assert_eq!(dt.format("%Y-%m-%dT%H:%M:%S").to_string(), "2018-08-13T02:20:05");
+
+
+    // let dt: Inst = Inst.from_millis(1534126805875);
+
+
+
+
 }
 
 #[test]
