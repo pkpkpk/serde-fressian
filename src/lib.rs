@@ -6,14 +6,20 @@
 extern crate itertools;
 
 #[macro_use]
+extern crate shrinkwraprs;
+
+#[macro_use]
 extern crate serde_derive;
 
 extern crate serde;
 
 extern crate byteorder;
+extern crate uuid;
+extern crate chrono;
 
 mod imp;
 pub mod ser;
 pub mod de;
+pub mod inst;
 
 

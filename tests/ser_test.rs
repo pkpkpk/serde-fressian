@@ -9,6 +9,7 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_bytes;
 extern crate serde_fressian;
+// extern crate chrono;
 
 use std::collections::{HashMap, HashSet};
 use serde::de::{self, Deserialize};
@@ -121,6 +122,17 @@ fn de_test(){
     let t: HashSet<String> = serde_fressian::de::from_vec(&value).unwrap();
     assert_eq!(control, t);
 
+    ////////////////////////////////////////////////////////////////////
+
+
+    // use chrono::{ DateTime, Utc,};
+    use serde_fressian::inst::{Inst};
+    // #inst "2018-08-13T02:20:05.875-00:00"
+    let value: Vec<u8> = vec![200,123,101,49,21,83,115];
+    let dt: Inst = serde_fressian::de::from_vec(&value).unwrap();
+    // assert_eq!(dt.to_string(), "2018-08-13T02:20:05.875-00:00");
+    // couldnt figure out fff in "yyyy-mm-ddThh:mm:ss.fff+hh:mm"
+    assert_eq!(dt.format("%Y-%m-%dT%H:%M:%S").to_string(), "2018-08-13T02:20:05");
 }
 
 #[test]

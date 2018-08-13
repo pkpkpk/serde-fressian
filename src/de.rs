@@ -9,6 +9,9 @@ use imp::error::{Error, Result};
 use imp::RawInput::{RawInput};
 use imp::codes;
 
+// use uuid::Uuid;
+
+
 pub struct Deserializer<'a>{
     rawIn: RawInput<'a>
 }
@@ -123,10 +126,6 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                         visitor.visit_map(ClosedListReader::new(self))
                     }
 
-                    // codes::BEGIN_OPEN_LIST => {
-                    //     visitor.visit_map(OpenListReader::new(self))
-                    // }
-
                     _ => {
                         Err(Error::Message("malformed LIST body of MAP".to_string()))
                     }
@@ -150,20 +149,27 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                         visitor.visit_seq(ClosedListReader::new(self))
                     }
 
-                    // codes::BEGIN_OPEN_LIST => {
-                    //     visitor.visit_map(OpenListReader::new(self))
-                    // }
-
                     _ => {
                         Err(Error::Message("malformed LIST body of SET".to_string()))
                     }
                 }
             }
 
+            //////////////////////////////////////////////////////////////////////
+
+            codes::INST => {
+                visitor.visit_i64(self.rawIn.read_int()?) //millisecs
+            }
+
 
 
             //////////////////////////////////////////////////////////////////////
             //char
+            //footer
+            // use num::BigInt;
+            // uuid
+            // typed arrays
+            // records
             //put cache, get cache, PRIORITY_CACHE_PACKED_START...
 
             _ => Err(Error::UnmatchedCode(code as u8)),
