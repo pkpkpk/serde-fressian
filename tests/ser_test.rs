@@ -135,10 +135,11 @@ fn de_test(){
     assert_eq!(dt.format("%Y-%m-%dT%H:%M:%S").to_string(), "2018-08-13T02:20:05");
 
 
-    // let dt: Inst = Inst.from_millis(1534126805875);
-
-
-
+    ///// close enough!!
+    // let dt: Inst = Inst::from_millis(1534126805875);
+    // let mut fw = Serializer::new();
+    // dt.serialize(&mut fw);
+    // assert_eq!(fw.to_vec(), value);
 
 }
 
@@ -148,7 +149,8 @@ fn test_reset(){
 
     let v: Vec<i64> = vec![-2, -1, 0, 1, 2];
     let control: Vec<u8> = vec![233,79,254,255,0,1,2];
-    fw.write_list(&v).unwrap();
+    // fw.write_list(&v).unwrap();
+    &v.serialize(&mut fw).unwrap();
     assert_eq!(fw.to_vec(), control);
     fw.reset();
     let control: Vec<u8> = vec![];
@@ -205,7 +207,8 @@ fn list_test(){
 
     let v: Vec<i64> = vec![-2, -1, 0, 1, 2];
     let control: Vec<u8> = vec![233,79,254,255,0,1,2];
-    fw.write_list(&v).unwrap();
+    // fw.write_list(&v).unwrap();
+    &v.serialize(&mut fw).unwrap();
     assert_eq!(fw.to_vec(), control);
     fw.reset();
     &v.serialize(&mut fw);
@@ -219,7 +222,8 @@ fn list_test(){
     #[cfg(raw_UTF8)]
     let control: Vec<u8> = vec![236,9,191,1,105,191,2,97,109,191,1,97,191,10,114,101,97,115,111,110,97,98,108,101,191,3,109,97,110,191,3,103,101,116,191,3,111,102,102,191,2,109,121,191,4,99,97,115,101];
 
-    fw.write_list(&v).unwrap();
+    // fw.write_list(&v).unwrap();
+    &v.serialize(&mut fw).unwrap();
     assert_eq!(fw.to_vec(), control);
     fw.reset();
     &v.serialize(&mut fw);
@@ -235,7 +239,8 @@ fn list_test(){
     let control: Vec<u8> = vec![231,229,222,115,111,109,101,229,224,110,101,115,116,101,100,229,222,115,104,105,116];
     #[cfg(raw_UTF8)]
     let control: Vec<u8> = vec![231,229,191,4,115,111,109,101,229,191,6,110,101,115,116,101,100,229,191,4,115,104,105,116];
-    fw.write_list(&v).unwrap();
+    // fw.write_list(&v).unwrap();
+    &v.serialize(&mut fw).unwrap();
     assert_eq!(fw.to_vec(), control);
 
     fw.reset();
