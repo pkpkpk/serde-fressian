@@ -9,8 +9,6 @@ use imp::error::{Error, Result};
 use imp::RawInput::{RawInput};
 use imp::codes;
 
-// use uuid::Uuid;
-
 
 pub struct Deserializer<'a>{
     rawIn: RawInput<'a>
@@ -161,13 +159,16 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_i64(self.rawIn.read_int()?) //millisecs
             }
 
+            codes::UUID => {
+                visitor.visit_bytes(self.rawIn.read_bytes()?)
+            }
+
 
 
             //////////////////////////////////////////////////////////////////////
             //char
             //footer
             // use num::BigInt;
-            // uuid
             // typed arrays
             // records
             //put cache, get cache, PRIORITY_CACHE_PACKED_START...

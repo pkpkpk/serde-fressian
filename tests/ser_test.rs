@@ -9,6 +9,7 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_bytes;
 extern crate serde_fressian;
+extern crate uuid;
 // extern crate chrono;
 
 use std::collections::{HashMap, HashSet};
@@ -142,6 +143,26 @@ fn inst_test(){
     // assert_eq!(fw.to_vec(), value); ///// close enough!!
     let dt: Inst = serde_fressian::de::from_vec(&fw.to_vec()).unwrap();
     assert_eq!(dt.format("%Y-%m-%dT%H:%M:%S").to_string(), "2018-08-13T02:20:05");
+}
+
+
+
+
+#[test]
+fn uuid_test(){
+    use serde_fressian::UUID::{UUID};
+    use uuid::Uuid;
+
+    // #uuid "c8bf117b-8ee4-4e74-8c1f-51df0a757fe8"
+    let control_value =  Uuid::parse_str("c8bf117b-8ee4-4e74-8c1f-51df0a757fe8").unwrap();
+    let control_bytes: Vec<u8> = vec![195,217,16,200,191,17,123,142,228,78,116,140,31,81,223,10,117,127,232];
+
+    // let test_value: uuid::Uuid =  Uuid::parse_str("c8bf117b-8ee4-4e74-8c1f-51df0a757fe8").unwrap();
+    // assert_eq!(test_value, control_value);
+
+    let test_value: UUID = serde_fressian::de::from_vec(&control_bytes).unwrap();
+
+
 }
 
 #[test]

@@ -12,6 +12,7 @@ extern crate shrinkwraprs;
 extern crate serde_derive;
 
 extern crate serde;
+extern crate serde_bytes;
 
 extern crate byteorder;
 extern crate uuid;
@@ -20,6 +21,11 @@ extern crate chrono;
 mod imp;
 pub mod ser;
 pub mod de;
-pub mod inst;
+pub mod types;
+
+pub use types::{
+    inst,
+    UUID
+};
 
 
