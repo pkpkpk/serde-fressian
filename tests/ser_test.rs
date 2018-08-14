@@ -121,26 +121,27 @@ fn de_test(){
     let value: Vec<u8> = vec![193,237,223,99,111,108,105,110,220,101,100,222,116,104,111,109,223,106,111,110,110,121,222,112,104,105,108,253];
     let t: HashSet<String> = serde_fressian::de::from_vec(&value).unwrap();
     assert_eq!(control, t);
+}
 
-    ////////////////////////////////////////////////////////////////////
 
-
+#[test]
+fn inst_test(){
     // use chrono::{ DateTime, Utc,};
     use serde_fressian::inst::{Inst};
     // #inst "2018-08-13T02:20:05.875-00:00"
     let value: Vec<u8> = vec![200,123,101,49,21,83,115];
+    let control_str = "2018-08-13T02:20:05";
     let dt: Inst = serde_fressian::de::from_vec(&value).unwrap();
     // assert_eq!(dt.to_string(), "2018-08-13T02:20:05.875-00:00");
     // couldnt figure out fff in "yyyy-mm-ddThh:mm:ss.fff+hh:mm"
+    assert_eq!(dt.format("%Y-%m-%dT%H:%M:%S").to_string(), control_str);
+    // rt
+    let dt: Inst = Inst::from_millis(1534126805875);
+    let mut fw = Serializer::new();
+    dt.serialize(&mut fw);
+    // assert_eq!(fw.to_vec(), value); ///// close enough!!
+    let dt: Inst = serde_fressian::de::from_vec(&fw.to_vec()).unwrap();
     assert_eq!(dt.format("%Y-%m-%dT%H:%M:%S").to_string(), "2018-08-13T02:20:05");
-
-
-    ///// close enough!!
-    // let dt: Inst = Inst::from_millis(1534126805875);
-    // let mut fw = Serializer::new();
-    // dt.serialize(&mut fw);
-    // assert_eq!(fw.to_vec(), value);
-
 }
 
 #[test]
