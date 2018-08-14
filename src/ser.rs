@@ -14,15 +14,21 @@ pub struct Serializer{
 }
 
 impl Serializer{
-    pub fn new() -> Serializer {
+    pub fn new() -> Self { //parameterize
         Serializer {
             rawOut: RawOutput::from_vec(Vec::new())
         }
     }
 
-    pub fn with_capacity(cap: usize) -> Serializer {
+    pub fn with_capacity(cap: usize) -> Self {
         Serializer {
             rawOut: RawOutput::from_vec(Vec::with_capacity(cap))
+        }
+    }
+
+    pub fn from_vec(v: Vec<u8>) -> Self {
+        Serializer {
+            rawOut: RawOutput::from_vec(v)
         }
     }
 
@@ -34,13 +40,29 @@ impl Serializer{
         self.rawOut.get_ref()
     }
 
-    pub fn to_vec(&mut self) -> Vec<u8>{
+    pub fn to_vec(&mut self) -> Vec<u8> {
         self.rawOut.to_vec()
     }
-    //from_vec
+
+    // TODO may include bytes past written mark if reset has been used
+    // pub fn into_inner(self) -> Vec<u8>{}
+
     //from reeader
     //etc
 }
+
+// write a value to bytes, skipping writer creation
+pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
+where
+    T: Serialize,
+{
+    // let buf = Vec::with_capacity(100);
+    let mut serializer = Serializer::new();
+
+    value.serialize(&mut serializer)?;
+    Ok(serializer.to_vec())
+}
+
 
 pub trait FressianWriter {
 
@@ -88,9 +110,6 @@ pub trait FressianWriter {
 }
 
 
-
-
-// impl<'a> FressianWriter for &'a mut Serializer {
 impl FressianWriter for Serializer {
 
     fn write_code(&mut self, code: u8 ) -> Result<()>{
@@ -276,34 +295,10 @@ impl<'a> ser::Serializer for &'a mut Serializer{
         value.serialize(self)
     }
 
-    fn serialize_unit(self) -> Result<()> {
-        self.write_null()
-    }
+    fn serialize_unit(self) -> Result<()> { self.write_null() }
 
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> { self.serialize_unit() }
 
-
-    // Unit struct means a named value containing no data.
-    // There is no need to serialize the name in most formats.
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
-        self.serialize_unit()
-    }
-
-    // When serializing a unit variant (or any other kind of variant), formats
-    // can choose whether to keep track of it by index or by name. Binary
-    // formats typically use the index of the variant and human-readable formats
-    // typically use the name.
-    fn serialize_unit_variant(
-        self,
-        _name: &'static str,
-        _variant_index: u32,
-        variant: &'static str,
-    ) -> Result<()> {
-        self.serialize_str(variant)
-    }
-
-
-    // As is done here, serializers are encouraged to treat newtype structs as
-    // insignificant wrappers around the data they contain.
     fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -317,6 +312,51 @@ impl<'a> ser::Serializer for &'a mut Serializer{
         }
     }
 
+    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
+        match _len {
+            Some(n) => {
+                self.write_list_header(n)?;
+                Ok(self)
+            }
+            None => {
+                Err(Error::Message(
+                    "cannot use serde::ser::serialize on uncounted sequences at this time.
+                     If known to be finite length, use serializer.write_list().
+                     If indeterminate length, use serializer.begin_open_list()".to_string()))
+            }
+        }
+    }
+
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
+        match _len {
+            Some(l) => {
+                let length = 2 * l;
+                self.write_code(codes::MAP)?;
+                self.write_list_header(length)?;
+                Ok(self)
+            }
+            None => {
+                Err(Error::Message(
+                    "cannot use serde::ser::serialize on uncounted sequences at this time.
+                     If known to be finite length, use serializer.write_map().
+                     If indeterminate length, write codes::MAP and serializer.begin_open_list()".to_string()))
+            }
+        }
+    }
+
+    fn serialize_struct(self, _name: &'static str, len: usize,) -> Result<Self::SerializeStruct> {
+        self.serialize_map(Some(len))
+    }
+
+    // keyword?
+    fn serialize_unit_variant(
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        variant: &'static str,
+    ) -> Result<()> {
+        self.serialize_str(variant)
+    }
 
     // Note that newtype variant (and all of the other variant serialization
     // methods) refer exclusively to the "externally tagged" enum
@@ -337,47 +377,10 @@ impl<'a> ser::Serializer for &'a mut Serializer{
         value.serialize(&mut *self)
     }
 
-    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
-        match _len {
-            Some(n) => {
-                self.write_list_header(n)?;
-                Ok(self)
-            }
-            None => {
-                Err(serde::de::Error::custom(
-                    "cannot use serde::ser::serialize on uncounted sequences at this time.
-                     If known to be finite use serializer.write_list().
-                     If indet, use begin_open_list & end_list manually."))
-            }
-        }
-    }
-
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        match _len {
-            Some(l) => {
-                let length = 2 * l;
-                self.write_code(codes::MAP)?;
-                self.write_list_header(length)?;
-                Ok(self)
-            }
-            None => {
-                Err(serde::de::Error::custom(
-                    "cannot use serde::ser::serialize on uncounted sequences at this time.
-                     If map, use serializer.write_list().
-                     If known to be finite use serializer.write_list().
-                     If indet, use begin_open_list & end_list manually."))
-            }
-        }
-    }
-
-    // Tuples look just like sequences in JSON. Some formats may be able to
-    // represent tuples more efficiently by omitting the length, since tuple
-    // means that the corresponding `Deserialize implementation will know the
-    // length without needing to look at the serialized data.
+    // Tuples look just like sequences in JSON.
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
         self.serialize_seq(Some(len))
     }
-
 
     // Tuple structs look just like sequences in JSON.
     fn serialize_tuple_struct(
@@ -387,7 +390,6 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     ) -> Result<Self::SerializeTupleStruct> {
         self.serialize_seq(Some(len))
     }
-
 
     // Tuple variants are represented in JSON as `{ NAME: [DATA...] }`. Again
     // this method is only responsible for the externally tagged representation.
@@ -400,19 +402,6 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     ) -> Result<Self::SerializeTupleVariant> {
         variant.serialize(&mut *self)?;
         Ok(self)
-    }
-
-    // Structs look just like maps in JSON. In particular, JSON requires that we
-    // serialize the field names of the struct. Other formats may be able to
-    // omit the field names when serializing structs because the corresponding
-    // Deserialize implementation is required to know what the keys are without
-    // looking at the serialized data.
-    fn serialize_struct(
-        self,
-        _name: &'static str,
-        len: usize,
-    ) -> Result<Self::SerializeStruct> {
-        self.serialize_map(Some(len))
     }
 
     // Struct variants are represented in JSON as `{ NAME: { K: V, ... } }`.
@@ -429,12 +418,11 @@ impl<'a> ser::Serializer for &'a mut Serializer{
     }
 }
 
-// called after `serialize_seq` is called on the Serializer.
+
 impl<'a> ser::SerializeSeq for &'a mut Serializer {
     type Ok = ();
     type Error = Error;
 
-    // Serialize a single element of the sequence.
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
@@ -484,21 +472,12 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
 }
 
 
-// There is a third optional method on the `SerializeMap` trait. The
-// `serialize_entry` method allows serializers to optimize for the case where
-// key and value are both available simultaneously.
+// missing optional `serialize_entry` method allows serializers to optimize for the case where kv both available
 impl<'a> ser::SerializeMap for &'a mut Serializer {
     type Ok = ();
     type Error = Error;
 
-    // The Serde data model allows map keys to be any serializable type. JSON
-    // only allows string keys so the implementation below will produce invalid
-    // JSON if the key serializes as something other than a string.
-    //
-    // A real JSON serializer would need to validate that map keys are strings.
-    // This can be done by using a different Serializer to serialize the key
-    // (instead of `&mut **self`) and having that other serializer only
-    // implement `serialize_str` and return an error on any other data type.
+    // The Serde data model allows map keys to be any serializable type.
     fn serialize_key<T>(&mut self, key: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
@@ -542,27 +521,6 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
 
     fn end(self) -> Result<()> { Ok(()) }
 }
-
-//////////////////////////////////////////////////////
-
-
-
-// // write a value to bytes, skipping writer creation
-// pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
-// where
-//     T: Serialize,
-// {
-//     let buf = Vec::with_capacity(100);
-//     let mut serializer = Serializer {
-//         rawOut: RawOutput::from_vec(buf)
-//     };
-//
-//     value.serialize(&mut serializer)?;
-//     Ok(serializer.rawOut.into_inner())
-// }
-
-
-
 
 //////////////////////////////////////////////////////
 // from serde/src/ser/mod.rs
