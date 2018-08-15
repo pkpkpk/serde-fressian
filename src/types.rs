@@ -29,7 +29,6 @@ pub mod inst {
             where D: Deserializer<'de>,
         {
             let ms: i64 = i64::deserialize(deserializer)?;
-            // let t = DateTime::from_millis(ms);
             Ok(Inst::from_millis(ms) )
         }
     }
@@ -39,9 +38,7 @@ pub mod inst {
         where
             S: Serializer,
         {
-            // let ms =  self.timestamp_millis();
-            let ms = self.to_millis();
-            serializer.serialize_newtype_struct("INST", &ms)
+            serializer.serialize_newtype_struct("INST", &self.to_millis())
         }
     }
 }
@@ -108,7 +105,6 @@ pub mod URI {
         fn deserialize<D>(deserializer: D) -> Result<URI, D::Error>
             where D: Deserializer<'de>,
         {
-            // this could be str if written as raw_utf8?
             let s: String = String::deserialize(deserializer)?;
 
             match Url::parse(s.as_ref()) {
@@ -123,8 +119,6 @@ pub mod URI {
         where
             S: Serializer,
         {
-            // let bytes: &[u8] = self.as_bytes();
-            // let buf = ByteBuf::from(bytes);
             serializer.serialize_newtype_struct("URI", self.as_str())
         }
     }

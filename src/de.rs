@@ -164,22 +164,28 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
 
             codes::URI => {
-                // visitor.visit_string(self.rawIn.read_string())
-                //not sure if fressian string or raw utf
-                // peek ahead to get String not str to URI deserialize? how to accept either?///////////
-                self.deserialize_any(visitor)
+                // Url crate wants &str
+                let string_code = self.read_next_code()?;
+                match string_code as u8 {
+                    codes::UTF8 => {
+                        let length = self.rawIn.read_count()?;
+                        let s: &str = self.rawIn.read_raw_utf8(length as usize)?;
+                        visitor.visit_string(s.to_string())
+                    }
+                    codes::STRING_PACKED_LENGTH_START..=225 => {
+                        let length = code as u8 - codes::STRING_PACKED_LENGTH_START;
+                        let s: String = self.rawIn.read_fressian_string(length as usize)?;
+                        visitor.visit_string(s)
+                    }
+
+                    codes::STRING => {
+                        let length = self.rawIn.read_count()?;
+                        let s: String = self.rawIn.read_fressian_string(length as usize)?;
+                        visitor.visit_string(s)
+                    }
+                    _ => Err(Error::Message("URI found unmatched string code".to_string())),
+                }
             }
-
-
-
-            //////////////////////////////////////////////////////////////////////
-            //char
-            // nil
-            //footer
-            // use num::BigInt;
-            // typed arrays
-            // records
-            //put cache, get cache, PRIORITY_CACHE_PACKED_START...
 
             _ => Err(Error::UnmatchedCode(code as u8)),
         }
