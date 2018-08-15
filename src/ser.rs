@@ -1,5 +1,3 @@
-extern crate serde;
-
 use serde::ser::{self, Serialize};
 
 use std::cmp;
@@ -306,6 +304,10 @@ impl<'a> ser::Serializer for &'a mut Serializer{
         match _name {
             "INST" => {
                 self.write_code(codes::INST)?;
+                value.serialize(self)
+            }
+            "UUID" => {
+                self.write_code(codes::UUID)?;
                 value.serialize(self)
             }
             _ => value.serialize(self)

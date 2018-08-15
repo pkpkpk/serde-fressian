@@ -157,12 +157,14 @@ fn uuid_test(){
     let control_value =  Uuid::parse_str("c8bf117b-8ee4-4e74-8c1f-51df0a757fe8").unwrap();
     let control_bytes: Vec<u8> = vec![195,217,16,200,191,17,123,142,228,78,116,140,31,81,223,10,117,127,232];
 
-    // let test_value: uuid::Uuid =  Uuid::parse_str("c8bf117b-8ee4-4e74-8c1f-51df0a757fe8").unwrap();
-    // assert_eq!(test_value, control_value);
-
     let test_value: UUID = serde_fressian::de::from_vec(&control_bytes).unwrap();
+    assert_eq!(*test_value, control_value);
 
-
+    let mut fw = Serializer::new();
+    UUID::from_Uuid(control_value).serialize(&mut fw);
+    let buf = fw.to_vec();
+    let test_value: UUID = serde_fressian::de::from_vec(&buf).unwrap();
+    assert_eq!(*test_value, control_value);
 }
 
 #[test]
