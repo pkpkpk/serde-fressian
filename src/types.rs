@@ -69,21 +69,7 @@ pub mod UUID {
         {
             let bytes: ByteBuf = ByteBuf::deserialize(deserializer)?;
 
-            let mut offset = 0;
-            let mut acc: Vec<String> = vec![];
-
-            for n in vec![4, 2, 2, 2, 6].into_iter(){
-                let token: String = bytes.iter()
-                                    .skip(offset)
-                                    .take(n)
-                                    .map(|i: &u8| format!("{:02X}", *i as u32 + 0x100))
-                                    .map(|s: String| s.chars().skip(1).collect::<String>())
-                                    .collect();
-                offset += n;
-                acc.push(token);
-            }
-
-            match Uuid::parse_str(acc.join("-").as_ref()) {
+            match Uuid::from_bytes(bytes.as_ref()) {
                 Ok(uuid) => Ok(UUID(uuid)),
                 Err(e) => Err(Error::custom(e))
             }
