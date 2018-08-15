@@ -310,6 +310,10 @@ impl<'a> ser::Serializer for &'a mut Serializer{
                 self.write_code(codes::UUID)?;
                 value.serialize(self)
             }
+            "URI" => {
+                self.write_code(codes::URI)?;
+                value.serialize(self)
+            }
             _ => value.serialize(self)
         }
     }

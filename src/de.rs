@@ -163,10 +163,18 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_bytes(self.rawIn.read_bytes()?)
             }
 
+            codes::URI => {
+                // visitor.visit_string(self.rawIn.read_string())
+                //not sure if fressian string or raw utf
+                // peek ahead to get String not str to URI deserialize? how to accept either?///////////
+                self.deserialize_any(visitor)
+            }
+
 
 
             //////////////////////////////////////////////////////////////////////
             //char
+            // nil
             //footer
             // use num::BigInt;
             // typed arrays

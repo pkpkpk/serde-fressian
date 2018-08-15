@@ -17,6 +17,7 @@ extern crate serde_bytes;
 extern crate byteorder;
 extern crate uuid;
 extern crate chrono;
+extern crate url;
 
 mod imp;
 pub mod ser;
@@ -25,7 +26,8 @@ pub mod types;
 
 pub use types::{
     inst,
-    UUID
+    UUID,
+    URI
 };
 
 

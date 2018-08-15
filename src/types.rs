@@ -87,3 +87,45 @@ pub mod UUID {
         }
     }
 }
+
+pub mod URI {
+    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::ser::{Serialize, Serializer, SerializeStruct};
+    use serde_bytes::ByteBuf;
+
+    use url::{Url};
+
+    #[derive(Shrinkwrap)]
+    pub struct URI (Url);
+
+    impl URI {
+        pub fn from_Url(u: Url) -> Self {
+            URI(u)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for URI {
+        fn deserialize<D>(deserializer: D) -> Result<URI, D::Error>
+            where D: Deserializer<'de>,
+        {
+            // this could be str if written as raw_utf8?
+            let s: String = String::deserialize(deserializer)?;
+
+            match Url::parse(s.as_ref()) {
+                Ok(u) => Ok(URI(u)),
+                Err(e) => Err(Error::custom(e))
+            }
+        }
+    }
+
+    impl Serialize for URI {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            // let bytes: &[u8] = self.as_bytes();
+            // let buf = ByteBuf::from(bytes);
+            serializer.serialize_newtype_struct("URI", self.as_str())
+        }
+    }
+}
