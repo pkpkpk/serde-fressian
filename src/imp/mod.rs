@@ -3,4 +3,4 @@ pub mod ranges;
 pub mod RawOutput;
 pub mod RawInput;
 pub mod error;
-mod io;
+pub mod io;

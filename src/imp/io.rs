@@ -1,4 +1,4 @@
-// use byteorder::*;
+use byteorder::{BigEndian, WriteBytesExt};
 use imp::error::{Error, Result};
 use std::cmp;
 
@@ -98,6 +98,84 @@ impl<'a> ByteReader<'a>{
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+
+pub struct ByteWriter<T> {
+    out: T,
+    bytes_written: u64 //make usize
+    //cache: Option<Vec<u8>>
+    //checksum: Adler32
+}
+
+pub trait IWriteBytes {
+    fn write_u8(&mut self, byte: u8) -> Result<()>;
+
+    fn write_bytes(&mut self, bytes: &[u8], off: usize, len: usize) -> Result<()>;
+}
+
+impl IWriteBytes for ByteWriter<Vec<u8>> {
+    fn write_u8(&mut self, byte: u8) -> Result<()> { //abstract out as IWriteBytes?
+        vec_write_byte(&mut self.out, self.bytes_written, byte);
+        self.notify_bytes_written(1);
+        Ok(())
+    }
+
+    fn write_bytes(&mut self, bytes: &[u8], off: usize, len: usize) -> Result<()> {
+        let buf = &bytes[off as usize .. (off + len) as usize];
+        vec_write_bytes(&mut self.out, self.bytes_written, buf);
+        self.notify_bytes_written(len as u64);
+        Ok(())
+    }
+}
+
+impl ByteWriter<Vec<u8>> {
+
+    pub fn from_vec(out: Vec<u8>) -> Self {
+         ByteWriter{
+             bytes_written: 0,
+             out: out
+         }
+    }
+
+    /// returning the underlying bytevec, including any bytes past bytes_written
+    /// shrink and return?
+    pub fn into_inner(self) -> Vec<u8> { self.out }
+
+    /// Gets a reference to the underlying value
+    pub fn get_ref(&self) -> &Vec<u8> { &self.out }
+
+    /// Gets a mutable reference to the underlying value
+    pub fn get_mut(&mut self) -> &mut Vec<u8> { &mut self.out }
+
+    pub fn to_vec(&mut self) -> Vec<u8> {
+        if self.bytes_written == 0 {
+            Vec::new()
+        } else {
+            // TODO: cache + invalidate on writes
+            //should check if byteswritten is same length as vec, if so just clone?
+            let mut v: Vec<u8> = Vec::with_capacity(self.bytes_written as usize);
+            v.extend_from_slice(&self.out[0..self.bytes_written as usize]);
+            return v;
+        }
+    }
+
+    pub fn reset(&mut self){
+        // self.checksum.reset();
+        self.bytes_written = 0;
+    }
+
+    pub fn notify_bytes_written(&mut self, count: u64) {
+        self.bytes_written += count;
+    }
+
+    pub fn get_bytes_written(&self) -> u64 {
+        self.bytes_written
+    }
+
+    // pub fn getChecksum(&self){
+    //     self.checksum.getChecksum()
+    // }
+}
+
 fn vec_write_byte(vec: &mut Vec<u8>, bytes_written: u64, byte: u8) {
     let bytes_written = bytes_written as usize;
     if bytes_written == 0 {
@@ -135,72 +213,6 @@ fn vec_write_bytes(vec: &mut Vec<u8>, pos: u64, buf: &[u8]) { // -> Result<()>
     // Ok(())
 }
 
-pub struct ByteWriter {
-    out: Vec<u8>,
-    bytes_written: u64 //make usize
-    //cache: Option<Vec<u8>>
-    //checksum: Adler32
-}
-
-impl ByteWriter {
-
-    pub fn from_vec(out: Vec<u8>) -> ByteWriter {
-         ByteWriter{
-             bytes_written: 0,
-             out: out
-         }
-    }
-
-    /// returning the underlying bytevec, including any bytes past bytes_written
-    pub fn into_inner(self) -> Vec<u8> { self.out }
-
-    /// Gets a reference to the underlying value
-    pub fn get_ref(&self) -> &Vec<u8> { &self.out }
-
-    /// Gets a mutable reference to the underlying value
-    pub fn get_mut(&mut self) -> &mut Vec<u8> { &mut self.out }
-
-    // TODO: cache + invalidate on writes
-    pub fn to_vec(&mut self) -> Vec<u8> {
-        if self.bytes_written == 0 {
-            Vec::new()
-        } else {
-            let mut v: Vec<u8> = Vec::with_capacity(self.bytes_written as usize);
-            v.extend_from_slice(&self.out[0..self.bytes_written as usize]);
-            return v;
-        }
-    }
-
-    pub fn reset(&mut self){
-        // self.checksum.reset();
-        self.bytes_written = 0;
-    }
-
-    pub fn notify_bytes_written(&mut self, count: u64) {
-        self.bytes_written += count;
-    }
-
-    pub fn get_bytes_written(&self) -> u64 {
-        self.bytes_written
-    }
-
-    pub fn write_raw_byte(&mut self, byte: u8) -> Result<()> { //abstract out as IWriteBytes?
-        vec_write_byte(&mut self.out, self.bytes_written, byte);
-        self.notify_bytes_written(1);
-        Ok(())
-    }
-
-    pub fn write_raw_bytes(&mut self, bytes: &[u8], off: usize, len: usize) -> Result<()> {
-        let buf = &bytes[off as usize .. (off + len) as usize];
-        vec_write_bytes(&mut self.out, self.bytes_written, buf);
-        self.notify_bytes_written(len as u64);
-        Ok(())
-    }
-
-    // pub fn getChecksum(&self){
-    //     self.checksum.getChecksum()
-    // }
-}
 
 
 mod test {
@@ -244,30 +256,30 @@ mod test {
     }
 
     #[test]
-    fn write_raw_byte_test (){
+    fn write_u8_test (){
         let mut wrt = ByteWriter::from_vec(Vec::new());
-        wrt.write_raw_byte(99 as u8).unwrap();
-        wrt.write_raw_byte(100 as u8).unwrap();
-        wrt.write_raw_byte(101 as u8).unwrap();
+        wrt.write_u8(99 as u8).unwrap();
+        wrt.write_u8(100 as u8).unwrap();
+        wrt.write_u8(101 as u8).unwrap();
         let control: Vec<u8> = vec![99, 100, 101];
         assert_eq!(&wrt.to_vec(), &control);
         assert_eq!(wrt.get_bytes_written(), 3);
         wrt.reset();
         assert_eq!(wrt.get_bytes_written(), 0);
-        wrt.write_raw_byte(54 as u8).unwrap();
+        wrt.write_u8(54 as u8).unwrap();
         let control: Vec<u8> = vec![54];
         assert_eq!(&wrt.to_vec(), &control);
     }
 
     #[test]
-    fn write_raw_bytes_test(){
+    fn write_bytes_test(){
         let mut wrt = ByteWriter::from_vec(Vec::new());
         let v: Vec<u8> = vec![255,254,253,0,1,2,3];
-        wrt.write_raw_bytes(v.as_slice(), 0, v.len()).unwrap();
+        wrt.write_bytes(v.as_slice(), 0, v.len()).unwrap();
         assert_eq!(&wrt.to_vec(), &v);
         wrt.reset();
         assert_eq!(&wrt.to_vec(), &vec![]);
-        wrt.write_raw_bytes(v.as_slice(), 2, 3).unwrap();
+        wrt.write_bytes(v.as_slice(), 2, 3).unwrap();
         assert_eq!(&wrt.to_vec(), &vec![253, 0, 1]);
     }
 }

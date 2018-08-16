@@ -6,47 +6,44 @@ use imp::RawOutput::*;
 use imp::codes;
 use imp::ranges;
 use imp::error::{Error, Result};
+use imp::io::{ByteWriter, IWriteBytes};
 
-pub struct Serializer{
+pub struct Serializer<W>{
+    writer: W,
     rawOut: RawOutput
 }
 
-impl Serializer{
-    pub fn new() -> Self { //parameterize
+impl<W> Serializer<W>
+where
+    W: IWriteBytes,
+{
+    pub fn new(writer: W) -> Self { //parameterize
         Serializer {
-            rawOut: RawOutput::from_vec(Vec::new())
+            writer: writer, //ByteWriter::from_vec(Vec::new())
+            rawOut: RawOutput
         }
     }
+}
 
-    pub fn with_capacity(cap: usize) -> Self {
-        Serializer {
-            rawOut: RawOutput::from_vec(Vec::with_capacity(cap))
-        }
-    }
-
+impl Serializer<ByteWriter<Vec<u8>>> {
     pub fn from_vec(v: Vec<u8>) -> Self {
         Serializer {
-            rawOut: RawOutput::from_vec(v)
+            writer: ByteWriter::from_vec(v),
+            rawOut: RawOutput
         }
     }
 
     pub fn reset(&mut self) {
-        self.rawOut.reset()
+        self.writer.reset()
     }
 
     pub fn get_ref(&self) -> &Vec<u8> {
-        self.rawOut.get_ref()
+        self.writer.get_ref()
     }
 
     pub fn to_vec(&mut self) -> Vec<u8> {
-        self.rawOut.to_vec()
+        self.writer.to_vec()
     }
-
-    // TODO may include bytes past written mark if reset has been used
-    // pub fn into_inner(self) -> Vec<u8>{}
-
-    //from reeader
-    //etc
 }
 
 // write a value to bytes, skipping writer creation
@@ -54,8 +51,8 @@ pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
 {
-    // let buf = Vec::with_capacity(100);
-    let mut serializer = Serializer::new();
+    let buf = Vec::with_capacity(100);
+    let mut serializer = Serializer::from_vec(buf);
 
     value.serialize(&mut serializer)?;
     Ok(serializer.to_vec())
@@ -82,7 +79,7 @@ pub trait FressianWriter {
 
     fn write_string(&mut self, s: &str) -> Result<()>;
 
-    fn write_footer(&mut self) -> Result<()>;
+    // fn write_footer(&mut self) -> Result<()>;
 
     fn begin_open_list(&mut self) -> Result<()>;
 
@@ -108,53 +105,57 @@ pub trait FressianWriter {
 }
 
 
-impl FressianWriter for Serializer {
+impl<W> FressianWriter for Serializer<W>
+where
+    W: IWriteBytes,
+{
 
-    fn write_code(&mut self, code: u8 ) -> Result<()>{
-        self.rawOut.write_code(code)
+    fn write_code(&mut self, code: u8 ) -> Result<()>
+    {
+        self.rawOut.write_code(&mut self.writer, code)
     }
 
     fn write_count(&mut self, count: usize) -> Result<()> {
-        self.rawOut.write_int(count as i64)
+        self.rawOut.write_int(&mut self.writer, count as i64)
     }
 
     fn write_int(&mut self, i: i64 ) -> Result<()>{
-        self.rawOut.write_int(i)
+        self.rawOut.write_int(&mut self.writer,i)
     }
 
     fn write_null(&mut self) -> Result<()> {
-        self.rawOut.write_null()
+        self.rawOut.write_null(&mut self.writer)
     }
 
     fn write_boolean(&mut self, b: bool) -> Result<()>{
-        self.rawOut.write_boolean(b)
+        self.rawOut.write_boolean(&mut self.writer, b)
     }
 
     fn write_float(&mut self, f: f32) -> Result<()>{
-        self.rawOut.write_float(f)
+        self.rawOut.write_float(&mut self.writer,f)
     }
 
     fn write_double(&mut self, f: f64) -> Result<()>{
-        self.rawOut.write_double(f)
+        self.rawOut.write_double(&mut self.writer,f)
     }
 
     fn write_bytes(&mut self, bytes: &[u8], offset: usize, length: usize) -> Result<()>{
-        self.rawOut.write_bytes(bytes,offset,length)
+        self.rawOut.write_bytes(&mut self.writer,bytes,offset,length)
     }
 
     fn write_string(&mut self, s: &str) -> Result<()> {
-        self.rawOut.write_string(s)
+        self.rawOut.write_string(&mut self.writer,s)
     }
 
-    fn write_footer(&mut self) -> Result<()> {
-        let length = self.rawOut.get_bytes_written();
-        // self.clear_caches()
-        self.rawOut.write_raw_i32(codes::FOOTER_MAGIC as i32)?;
-        self.rawOut.write_raw_i32(length as i32)?; //?
-        let checksum = 0; //rawOut.getChecksum().getValue()
-        self.rawOut.write_raw_i32(checksum)
-        // self.reset();
-    }
+    // fn write_footer(&mut self) -> Result<()> {
+    //     let length = self.rawOut.get_bytes_written();
+    //     // self.clear_caches()
+    //     self.rawOut.write_raw_i32(&mut self.writer,codes::FOOTER_MAGIC as i32)?;
+    //     self.rawOut.write_raw_i32(&mut self.writer,length as i32)?; //?
+    //     let checksum = 0; //rawOut.getChecksum().getValue()
+    //     self.rawOut.write_raw_i32(&mut self.writer,checksum)
+    //     // self.reset();
+    // }
 
     fn begin_open_list(&mut self) -> Result<()> {
         self.write_code(codes::BEGIN_OPEN_LIST)
@@ -170,7 +171,7 @@ impl FressianWriter for Serializer {
 
     fn write_list_header(&mut self, length: usize) -> Result<()>{
         if (length as u8) < ranges::LIST_PACKED_LENGTH_END {
-            self.rawOut.write_raw_byte(codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))
+            self.write_code(codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))
         } else {
             self.write_code(codes::LIST)?;
             self.write_count(length)
@@ -243,7 +244,10 @@ impl FressianWriter for Serializer {
     }
 }
 
-impl<'a> ser::Serializer for &'a mut Serializer{
+impl<'a, W> ser::Serializer for &'a mut Serializer<W>
+where
+    W: IWriteBytes,
+{
     type Ok = ();
     type Error = Error;
     type SerializeSeq = Self;
@@ -425,7 +429,10 @@ impl<'a> ser::Serializer for &'a mut Serializer{
 }
 
 
-impl<'a> ser::SerializeSeq for &'a mut Serializer {
+impl<'a,W> ser::SerializeSeq for &'a mut Serializer<W>
+where
+    W: IWriteBytes,
+{
     type Ok = ();
     type Error = Error;
 
@@ -438,7 +445,10 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a> ser::SerializeTuple for &'a mut Serializer {
+impl<'a,W> ser::SerializeTuple for &'a mut Serializer<W>
+where
+    W: IWriteBytes,
+{
     type Ok = ();
     type Error = Error;
 
@@ -451,7 +461,10 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer {
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
+impl<'a,W> ser::SerializeTupleStruct for &'a mut Serializer<W>
+where
+    W: IWriteBytes,
+{
     type Ok = ();
     type Error = Error;
 
@@ -464,7 +477,10 @@ impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
+impl<'a,W> ser::SerializeTupleVariant for &'a mut Serializer<W>
+where
+    W: IWriteBytes,
+{
     type Ok = ();
     type Error = Error;
 
@@ -479,7 +495,10 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
 
 
 // missing optional `serialize_entry` method allows serializers to optimize for the case where kv both available
-impl<'a> ser::SerializeMap for &'a mut Serializer {
+impl<'a,W> ser::SerializeMap for &'a mut Serializer<W>
+where
+    W: IWriteBytes,
+{
     type Ok = ();
     type Error = Error;
 
@@ -500,7 +519,10 @@ impl<'a> ser::SerializeMap for &'a mut Serializer {
 }
 
 // Structs are like maps in which the keys are constrained to be compile-time constant strings
-impl<'a> ser::SerializeStruct for &'a mut Serializer {
+impl<'a,W> ser::SerializeStruct for &'a mut Serializer<W>
+where
+    W: IWriteBytes,
+{
     type Ok = ();
     type Error = Error;
 
@@ -514,7 +536,10 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer {
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
+impl<'a,W> ser::SerializeStructVariant for &'a mut Serializer<W>
+where
+    W: IWriteBytes,
+{
     type Ok = ();
     type Error = Error;
 
