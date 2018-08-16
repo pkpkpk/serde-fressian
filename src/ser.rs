@@ -17,9 +17,9 @@ impl<W> Serializer<W>
 where
     W: IWriteBytes,
 {
-    pub fn new(writer: W) -> Self { //parameterize
+    pub fn new(writer: W) -> Self {
         Serializer {
-            writer: writer, //ByteWriter::from_vec(Vec::new())
+            writer: writer,
             rawOut: RawOutput
         }
     }
@@ -594,8 +594,3 @@ where
     }
 }
 
-
-mod test {
-    use super::*;
-
-}
