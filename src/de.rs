@@ -3,7 +3,6 @@ use serde::de::{
     MapAccess, SeqAccess, VariantAccess, Visitor,
 };
 
-
 use imp::byte_reader::{ByteReader};
 use imp::error::{Error, Result};
 use imp::RawInput::{RawInput};
@@ -54,7 +53,19 @@ pub fn from_vec<'a, T>(v: &'a Vec<u8>) -> Result<T>
     T::deserialize(&mut deserializer)
 }
 
-// from_reader
+use std::io;
+
+pub fn from_reader<R, T>(mut rdr: R) -> Result<T>
+where
+    R: io::Read,
+    T: de::DeserializeOwned,
+{
+    let mut bytes = Vec::new();
+    match rdr.read_to_end(&mut bytes){
+        Ok(_) => from_bytes(&bytes),
+        Err(_) => Err(Error::Message("io::rdr read_to_end failure".to_string())) //forward e
+    }
+}
 
 impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     type Error = Error;
