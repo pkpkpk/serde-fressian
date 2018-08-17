@@ -222,12 +222,6 @@ fn bytes_serialization_test(){
     fw.write_bytes(v.as_slice(), 0, v.len()).unwrap();
     assert_eq!(fw.to_vec(), control);
 
-    //// I have no idea why this doesnt work
-    // fw.reset();
-    // &mut fw.serialize_bytes(v.as_slice()).unwrap();
-    // assert_eq!(&fw.to_vec(), &control);
-
-
     // By default, serde writes Vec<u8> + &[u8] as lists when calling .serialize()
     // - see https://serde.rs/impl-serialize.html#other-special-cases
     // - can't override built in serialize impl?
@@ -237,7 +231,6 @@ fn bytes_serialization_test(){
     fw.reset();
     bb.serialize(&mut fw).unwrap();
     assert_eq!(&fw.to_vec(), &control);
-
 
 }
 
