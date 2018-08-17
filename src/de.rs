@@ -3,7 +3,7 @@ use serde::de::{
     MapAccess, SeqAccess, VariantAccess, Visitor,
 };
 
-use imp::byte_reader::{ByteReader};
+use imp::io::{ByteReader};
 use imp::error::{Error, Result};
 use imp::RawInput::{RawInput};
 use imp::codes;

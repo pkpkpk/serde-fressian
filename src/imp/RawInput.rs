@@ -1,7 +1,7 @@
 #![allow(overflowing_literals)]
 
 use imp::codes;
-use imp::byte_reader::{ByteReader};
+use imp::io::{ByteReader};
 use imp::error::{Error, Result};
 
 use byteorder::*;

@@ -4,4 +4,3 @@ pub mod RawOutput;
 pub mod RawInput;
 pub mod error;
 pub mod io;
-pub mod byte_reader;

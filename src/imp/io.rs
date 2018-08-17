@@ -3,25 +3,20 @@ use imp::error::{Error, Result};
 use std::cmp;
 
 pub struct ByteReader<'a> {
-    input: &'a Vec<u8>,
+    input: &'a [u8],
     bytes_read: usize
 }
 
-// pub trait IReadBytes {
-//     pub fn read_u8(&mut self) -> Result<&u8>;
-//     pub fn read_bytes(&mut self, length: usize) -> Result<&[u8]>;
-//     pub fn reset(&mut self);
-//     pub fn get_bytes_read(&self) -> usize;
-//     pub fn notify_bytes_read(&mut self, count: usize);
-// }
-
-
-impl<'a> ByteReader<'a>{
-    pub fn from_vec(v: &'a Vec<u8>) -> ByteReader {
-        ByteReader{
-            input: v,
+impl<'a> ByteReader<'a> {
+    pub fn new(bytes: &'a [u8] ) -> Self {
+        ByteReader {
+            input: bytes,
             bytes_read: 0
         }
+    }
+
+    pub fn from_vec(v: &'a Vec<u8>) -> Self {
+        ByteReader::new(v.as_slice())
     }
 
     pub fn notify_bytes_read(&mut self, count: usize){
@@ -36,7 +31,9 @@ impl<'a> ByteReader<'a>{
         self.bytes_read = 0
     }
 
-    pub fn read_u8(&mut self) -> Result<&u8> { /////// change to just return byte
+    // pub fn validateChecksum(&mut self) -> Result<()> {}
+
+    pub fn read_u8(&mut self) -> Result<&u8> {
         match self.input.get(self.bytes_read) {
             Some(byte) => {
                 self.notify_bytes_read(1);
@@ -47,24 +44,14 @@ impl<'a> ByteReader<'a>{
             }
         }
     }
-
-    pub fn peek_u8(&mut self) -> Result<&u8> { /////// change to just return byte
-        match self.input.get(self.bytes_read) {
-            Some(byte) => {
-                // self.notify_bytes_read(1);
-                Ok(byte)
-            }
-            None => {
-                Err(Error::Eof)
-            }
-        }
-    }
-
     pub fn read_i8(&mut self) -> Result<i8> {
+        Ok(*self.read_u8()? as i8)
+    }
+
+    pub fn peek_u8(&mut self) -> Result<&u8> {
         match self.input.get(self.bytes_read) {
             Some(byte) => {
-                self.notify_bytes_read(1);
-                Ok(*byte as i8)
+                Ok(byte)
             }
             None => {
                 Err(Error::Eof)
@@ -87,12 +74,7 @@ impl<'a> ByteReader<'a>{
             }
         }
     }
-
-    // pub fn validateChecksum(&mut self) -> Result<()> {}
-
-    // pub fn close(&mut self) {}
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -121,7 +103,7 @@ impl IWriteBytes for ByteWriter<Vec<u8>> {
 
     fn write_bytes(&mut self, bytes: &[u8], off: usize, len: usize) -> Result<()> {
         let buf = &bytes[off as usize .. (off + len) as usize];
-        vec_write_bytes(&mut self.out, self.bytes_written, buf);
+        vec_write_bytes(&mut self.out, self.bytes_written as usize, buf);
         self.notify_bytes_written(len as u64);
         Ok(())
     }
@@ -191,11 +173,10 @@ fn vec_write_byte(vec: &mut Vec<u8>, bytes_written: u64, byte: u8) {
             vec.push(byte);
         }
     }
-    // Ok(())
 }
 
-fn vec_write_bytes(vec: &mut Vec<u8>, pos: u64, buf: &[u8]) { // -> Result<()>
-    let pos = pos as usize;
+//this is adapted from std::io::cursor<Vec<u8>>
+fn vec_write_bytes(vec: &mut Vec<u8>, pos: usize, buf: &[u8]) {
     // Make sure the internal buffer is as least as big as where we currently are
     let len = vec.len();
     if len < pos {
@@ -204,13 +185,10 @@ fn vec_write_bytes(vec: &mut Vec<u8>, pos: u64, buf: &[u8]) { // -> Result<()>
     }
     // Figure out what bytes will be used to overwrite what's currently
     // there (left), and what will be appended on the end (right)
-    {
-        let space = vec.len() - pos;
-        let (left, right) = buf.split_at(cmp::min(space, buf.len()));
-        vec[pos..pos + left.len()].copy_from_slice(left);
-        vec.extend_from_slice(right);
-    }
-    // Ok(())
+    let space = vec.len() - pos;
+    let (left, right) = buf.split_at(cmp::min(space, buf.len()));
+    vec[pos..pos + left.len()].copy_from_slice(left);
+    vec.extend_from_slice(right);
 }
 
 
