@@ -319,6 +319,27 @@ impl<'a> RawInput {
 
     }
 
+    pub fn read_string(&mut self, rdr: &'a mut ByteReader) -> Result<String> {
+        let code = *rdr.read_u8()?;
+        match code {
+            codes::STRING_PACKED_LENGTH_START..=codes::STRING_PACKED_LENGTH_END => {
+                RawInput.read_fressian_string(rdr, (code - codes::STRING_PACKED_LENGTH_START) as usize)
+            }
+            codes::STRING => {
+                let length = RawInput.read_count(rdr)?;
+                RawInput.read_fressian_string(rdr, length as usize)
+            }
+            // codes::STRING_CHUNK => {
+            //
+            // }
+            codes::UTF8 => {
+                let length = RawInput.read_count(rdr)?;
+                RawInput.read_raw_utf8(rdr, length as usize).and_then(|s: &str| Ok( s.to_string() ) )
+            }
+            _ => { Err(Error::Syntax)}
+        }
+    }
+
 }
 
 
@@ -506,63 +527,42 @@ mod test {
         //missing packed bytes
     }
 
-    fn read_string(rdr: &mut ByteReader) -> Result<String> {
-        let code = *rdr.read_u8()?;
-        match code {
-            codes::STRING_PACKED_LENGTH_START..=codes::STRING_PACKED_LENGTH_END => {
-                RawInput.read_fressian_string(rdr, (code - codes::STRING_PACKED_LENGTH_START) as usize)
-            }
-            codes::STRING => {
-                let length = RawInput.read_count(rdr)?;
-                RawInput.read_fressian_string(rdr, length as usize)
-            }
-            // codes::STRING_CHUNK => {
-            //
-            // }
-            codes::UTF8 => {
-                let length = RawInput.read_count(rdr)?;
-                RawInput.read_raw_utf8(rdr, length as usize).and_then(|s: &str| Ok( s.to_string() ) )
-            }
-            _ => { Err(Error::Syntax)}
-        }
-    }
-
     #[test]
     fn read_fressian_string_test() {
 
         let data: Vec<u8> = vec![218];
         let control = "".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), read_string(&mut rdr));
+        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
 
         // {:form "\"hola\"", :bytes [-34 104 111 108 97], :ubytes [222 104 111 108 97], :byte-count 5, :footer false, :value "hola"}
         let data: Vec<u8> = vec![222, 104, 111, 108, 97];
         let control = "hola".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), read_string(&mut rdr));
+        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
 
         // {:form "\"é\"", :bytes [-35 101 -52 -127], :ubytes [221 101 204 129], :byte-count 4, :footer false, :value "é"}
         let data: Vec<u8> = vec![221, 101, 204, 129];
         let control = "é".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), read_string(&mut rdr));
+        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
 
         // {:value "❤️", :bytes [-32 -30 -99 -92 -17 -72 -113], :ubytes [224 226 157 164 239 184 143], :byte-count 7, :footer false}
         let data: Vec<u8> = vec![224, 226, 157, 164, 239, 184, 143];
         let control = "❤️".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), read_string(&mut rdr));
+        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
 
         // {:value "😎", :bytes [-32 -19 -96 -67 -19 -72 -114], :ubytes [224 237 160 189 237 184 142], :byte-count 7, :footer false}
         let data: Vec<u8> = vec![224, 237, 160, 189, 237, 184, 142];
         let control = "😎".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), read_string(&mut rdr));
+        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
 
         let data: Vec<u8> = vec![227,60,101,204,129,226,157,164,239,184,143,195,159,226,132,157,230,157,177,228,186,172,230,157,177,228,186,172,237,160,189,237,184,137,32,237,160,189,237,184,142,32,237,160,190,237,180,148,32,237,160,189,237,184,144,32,237,160,189,237,185,132];
         let control = "é❤️ßℝ東京東京😉 😎 🤔 😐 🙄".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), read_string(&mut rdr));
+        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
     }
 }
 

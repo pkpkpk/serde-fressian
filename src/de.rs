@@ -34,6 +34,9 @@ impl<'de> Deserializer<'de>
     fn peek_next_code(&mut self) -> Result<i8> {
         RawInput.peek_next_code(&mut self.rdr)
     }
+
+    // write-byte
+    // reset
 }
 
 pub fn from_bytes<'a, T>(s: &'a [u8]) -> Result<T>
@@ -146,6 +149,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             //////////////////////////////////////////////////////////////////////
 
             codes::MAP => {
+                // visitvisit_list(self, visitor)
                 let list_code = self.read_next_code()?;
                 match list_code as u8 {
                     codes::LIST_PACKED_LENGTH_START..=235 => {
@@ -169,26 +173,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
 
             codes::SET => {
-                let list_code = self.read_next_code()?;
-                match list_code as u8 {
-                    codes::LIST_PACKED_LENGTH_START..=235 => {
-                        let length = list_code as u8 - codes::LIST_PACKED_LENGTH_START;
-                        visitor.visit_seq(FixedListReader::new(self, length as usize))
-                    }
-
-                    codes::LIST => {
-                        let length = self.rawIn.read_count(&mut self.rdr)?;
-                        visitor.visit_seq(FixedListReader::new(self, length as usize))
-                    }
-
-                    codes::BEGIN_CLOSED_LIST => {
-                        visitor.visit_seq(ClosedListReader::new(self))
-                    }
-
-                    _ => {
-                        Err(Error::Message("malformed LIST body of SET".to_string()))
-                    }
-                }
+                visit_list(self, visitor)
             }
 
             //////////////////////////////////////////////////////////////////////
@@ -203,50 +188,11 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
             codes::URI => {
                 // Url crate wants &str
-                let string_code = self.read_next_code()?;
-                match string_code as u8 {
-                    codes::UTF8 => {
-                        let length = self.rawIn.read_count(&mut self.rdr)?;
-                        let s: &str = self.rawIn.read_raw_utf8(&mut self.rdr, length as usize)?;
-                        visitor.visit_string(s.to_string())
-                    }
-                    codes::STRING_PACKED_LENGTH_START..=225 => {
-                        let length = string_code as u8 - codes::STRING_PACKED_LENGTH_START;
-                        let s: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
-                        visitor.visit_string(s)
-                    }
-
-                    codes::STRING => {
-                        let length = self.rawIn.read_count(&mut self.rdr)?;
-                        let s: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
-                        visitor.visit_string(s)
-                    }
-                    _ => Err(Error::Message("URI found unmatched string code".to_string())),
-                }
+                visitor.visit_string(self.rawIn.read_string(&mut self.rdr)?)
             }
 
             codes::REGEX => {
-                // Url crate wants &str
-                let string_code = self.read_next_code()?;
-                match string_code as u8 {
-                    codes::UTF8 => {
-                        let length = self.rawIn.read_count(&mut self.rdr)?;
-                        let s: &str = self.rawIn.read_raw_utf8(&mut self.rdr, length as usize)?;
-                        visitor.visit_string(s.to_string())
-                    }
-                    codes::STRING_PACKED_LENGTH_START..=225 => {
-                        let length = string_code as u8 - codes::STRING_PACKED_LENGTH_START;
-                        let s: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
-                        visitor.visit_string(s)
-                    }
-
-                    codes::STRING => {
-                        let length = self.rawIn.read_count(&mut self.rdr)?;
-                        let s: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
-                        visitor.visit_string(s)
-                    }
-                    _ => Err(Error::Message("REGEX found unmatched string code".to_string())),
-                }
+                visitor.visit_string(self.rawIn.read_string(&mut self.rdr)?)
             }
 
             _ => Err(Error::UnmatchedCode(code as u8)),
@@ -264,6 +210,31 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 }
 
 
+fn visit_list<'a, 'de, V>(de: &'a mut Deserializer<'de>, visitor: V) -> Result<V::Value>
+    where
+        V: Visitor<'de>,
+{
+    let list_code = de.read_next_code()?;
+    match list_code as u8 {
+        codes::LIST_PACKED_LENGTH_START..=235 => {
+            let length = list_code as u8 - codes::LIST_PACKED_LENGTH_START;
+            visitor.visit_seq(FixedListReader::new(de, length as usize))
+        }
+
+        codes::LIST => {
+            let length = de.rawIn.read_count(&mut de.rdr)?;
+            visitor.visit_seq(FixedListReader::new(de, length as usize))
+        }
+
+        codes::BEGIN_CLOSED_LIST => {
+            visitor.visit_seq(ClosedListReader::new(de))
+        }
+
+        _ => {
+            Err(Error::Message("unrecognized list code".to_string()))
+        }
+    }
+}
 
 
 struct FixedListReader<'a, 'de: 'a> {
