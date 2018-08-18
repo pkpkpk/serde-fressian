@@ -22,6 +22,9 @@ pub mod INST {
             let minor: i64 = self.timestamp_subsec_millis() as i64;
             major + minor
         }
+        pub fn into_inner(self) -> DateTime<Utc> {
+            self.0
+        }
     }
 
     impl<'de> Deserialize<'de> for INST {
@@ -57,6 +60,9 @@ pub mod UUID {
     impl UUID {
         pub fn from_Uuid(u: Uuid) -> Self {
             UUID(u)
+        }
+        pub fn into_inner(self) -> Uuid {
+            self.0
         }
     }
 
@@ -97,6 +103,9 @@ pub mod URI {
         pub fn from_Url(u: Url) -> Self {
             URI(u)
         }
+        pub fn into_inner(self) -> Url {
+            self.0
+        }
     }
 
     impl<'de> Deserialize<'de> for URI {
@@ -123,6 +132,9 @@ pub mod URI {
 }
 
 pub mod REGEX {
+    /// might be able to get away with a remote attr here but for consistency
+    /// just wrapping
+
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer, SerializeStruct};
 
@@ -134,6 +146,9 @@ pub mod REGEX {
     impl REGEX {
         pub fn from_Regex(re: Regex) -> Self {
             REGEX(re)
+        }
+        pub fn into_inner(self) -> Regex {
+            self.0
         }
     }
 
@@ -158,5 +173,4 @@ pub mod REGEX {
             serializer.serialize_newtype_struct("REGEX", self.0.as_str())
         }
     }
-
 }
