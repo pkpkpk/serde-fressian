@@ -127,18 +127,18 @@ fn de_test(){
 #[test]
 fn inst_test(){
     // use chrono::{ DateTime, Utc,};
-    use serde_fressian::inst::{Inst};
+    use serde_fressian::INST::{INST};
     // #inst "2018-08-13T02:20:05.875-00:00"
     let value: Vec<u8> = vec![200,123,101,49,21,83,115];
     let control_str = "2018-08-13T02:20:05";
-    let dt: Inst = de::from_vec(&value).unwrap();
+    let dt: INST = de::from_vec(&value).unwrap();
     // assert_eq!(dt.to_string(), "2018-08-13T02:20:05.875-00:00");
     // couldnt figure out fff in "yyyy-mm-ddThh:mm:ss.fff+hh:mm"
     assert_eq!(dt.format("%Y-%m-%dT%H:%M:%S").to_string(), control_str);
     // rt
-    let dt: Inst = Inst::from_millis(1534126805875);
+    let dt: INST = INST::from_millis(1534126805875);
     let written_bytes = ser::to_vec(&dt).unwrap();
-    let i: Inst = de::from_vec(&written_bytes).unwrap();
+    let i: INST = de::from_vec(&written_bytes).unwrap();
     assert_eq!(i.format("%Y-%m-%dT%H:%M:%S").to_string(), "2018-08-13T02:20:05");
 }
 

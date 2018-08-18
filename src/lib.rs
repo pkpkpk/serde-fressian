@@ -25,9 +25,9 @@ pub mod de;
 pub mod types;
 
 pub use types::{
-    inst,
+    INST,
     UUID,
-    URI
+    URI,
 };
 
 

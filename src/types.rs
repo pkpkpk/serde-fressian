@@ -1,6 +1,6 @@
 
 
-pub mod inst {
+pub mod INST {
 
     use chrono::{ DateTime, Utc,};
     use chrono::offset::{TimeZone, Offset};
@@ -10,12 +10,12 @@ pub mod inst {
     use serde::ser::{Serialize, Serializer, SerializeStruct};
 
     #[derive(Shrinkwrap)]
-    pub struct Inst (DateTime<Utc>);
+    pub struct INST (DateTime<Utc>);
 
-    impl Inst {
+    impl INST {
         // from mentat/edn
         pub fn from_millis(ms: i64) -> Self {
-            Inst(Utc.timestamp(ms / 1_000, ((ms % 1_000).abs() as u32) * 1_000))
+            INST(Utc.timestamp(ms / 1_000, ((ms % 1_000).abs() as u32) * 1_000))
         }
         pub fn to_millis(&self) -> i64 {
             let major: i64 = self.timestamp() * 1_000;
@@ -24,16 +24,16 @@ pub mod inst {
         }
     }
 
-    impl<'de> Deserialize<'de> for Inst {
-        fn deserialize<D>(deserializer: D) -> Result<Inst, D::Error>
+    impl<'de> Deserialize<'de> for INST {
+        fn deserialize<D>(deserializer: D) -> Result<INST, D::Error>
             where D: Deserializer<'de>,
         {
             let ms: i64 = i64::deserialize(deserializer)?;
-            Ok(Inst::from_millis(ms) )
+            Ok(INST::from_millis(ms) )
         }
     }
 
-    impl Serialize for Inst {
+    impl Serialize for INST {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
@@ -88,8 +88,6 @@ pub mod UUID {
 pub mod URI {
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer, SerializeStruct};
-    use serde_bytes::ByteBuf;
-
     use url::{Url};
 
     #[derive(Shrinkwrap)]
