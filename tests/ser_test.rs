@@ -34,6 +34,20 @@ fn de_test(){
 
     /////////////////////////////////////////////////////////////
 
+    let mut fw = Serializer::from_vec(Vec::new());
+    let value = ();
+    &value.serialize(&mut fw).unwrap();
+    let mut rdr = Deserializer::from_vec(fw.get_ref());
+    assert_eq!(Ok(value), <()>::deserialize(&mut rdr));
+
+    // (api/write [nil nil nil])
+    let value: Vec<u8> = vec![231,247,247,247];
+    let control: Vec<()> = vec![(),(),()];
+    let t: Vec<()> = serde_fressian::de::from_vec(&value).unwrap();
+    assert_eq!(control, t);
+
+    /////////////////////////////////////////////////////////////
+
     // packed list of numbers
     // (api/write [0 1 2 3])
     let value: Vec<u8> = vec![232,0,1,2,3];
