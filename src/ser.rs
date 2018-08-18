@@ -318,6 +318,10 @@ where
                 self.write_code(codes::URI)?;
                 value.serialize(self)
             }
+            "REGEX" => {
+                self.write_code(codes::REGEX)?;
+                value.serialize(self)
+            }
             _ => value.serialize(self)
         }
     }

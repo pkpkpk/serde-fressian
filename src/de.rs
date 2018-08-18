@@ -211,7 +211,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                         visitor.visit_string(s.to_string())
                     }
                     codes::STRING_PACKED_LENGTH_START..=225 => {
-                        let length = code as u8 - codes::STRING_PACKED_LENGTH_START;
+                        let length = string_code as u8 - codes::STRING_PACKED_LENGTH_START;
                         let s: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
                         visitor.visit_string(s)
                     }
@@ -222,6 +222,30 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                         visitor.visit_string(s)
                     }
                     _ => Err(Error::Message("URI found unmatched string code".to_string())),
+                }
+            }
+
+            codes::REGEX => {
+                // Url crate wants &str
+                let string_code = self.read_next_code()?;
+                match string_code as u8 {
+                    codes::UTF8 => {
+                        let length = self.rawIn.read_count(&mut self.rdr)?;
+                        let s: &str = self.rawIn.read_raw_utf8(&mut self.rdr, length as usize)?;
+                        visitor.visit_string(s.to_string())
+                    }
+                    codes::STRING_PACKED_LENGTH_START..=225 => {
+                        let length = string_code as u8 - codes::STRING_PACKED_LENGTH_START;
+                        let s: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
+                        visitor.visit_string(s)
+                    }
+
+                    codes::STRING => {
+                        let length = self.rawIn.read_count(&mut self.rdr)?;
+                        let s: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
+                        visitor.visit_string(s)
+                    }
+                    _ => Err(Error::Message("REGEX found unmatched string code".to_string())),
                 }
             }
 

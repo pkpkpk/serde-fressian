@@ -22,7 +22,7 @@ byteorder = "1.2.3"
 shrinkwraprs = "0.2.0"
 chrono = "0.4"
 uuid = "0.6"
-# regex = "1"
+regex = "1"
 url = "1.7.1"
 
 [dev-dependencies]

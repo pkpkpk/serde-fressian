@@ -18,6 +18,7 @@ extern crate byteorder;
 extern crate uuid;
 extern crate chrono;
 extern crate url;
+extern crate regex;
 
 mod imp;
 pub mod ser;
@@ -28,6 +29,7 @@ pub use types::{
     INST,
     UUID,
     URI,
+    REGEX,
 };
 
 

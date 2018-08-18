@@ -121,3 +121,42 @@ pub mod URI {
         }
     }
 }
+
+pub mod REGEX {
+    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::ser::{Serialize, Serializer, SerializeStruct};
+
+    use regex::Regex;
+
+    #[derive(Shrinkwrap)]
+    pub struct REGEX (Regex);
+
+    impl REGEX {
+        pub fn from_Regex(re: Regex) -> Self {
+            REGEX(re)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for REGEX {
+        fn deserialize<D>(deserializer: D) -> Result<REGEX, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let s: String = String::deserialize(deserializer)?;
+
+            match Regex::new(s.as_ref()) {
+                Ok(re) => Ok(REGEX::from_Regex(re)),
+                Err(e) => Err(Error::custom(e))
+            }
+        }
+    }
+
+    impl Serialize for REGEX {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("REGEX", self.0.as_str())
+        }
+    }
+
+}
