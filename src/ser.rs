@@ -250,13 +250,22 @@ where
 {
     type Ok = ();
     type Error = Error;
-    type SerializeSeq = Self;
-    type SerializeTuple = Self;
-    type SerializeTupleStruct = Self;
-    type SerializeTupleVariant = Self;
-    type SerializeMap = Self;
-    type SerializeStruct = Self;
-    type SerializeStructVariant = Self;
+    // type SerializeSeq = Self;
+    // type SerializeTuple = Self;
+    // type SerializeTupleStruct = Self;
+    // type SerializeTupleVariant = Self;
+    // type SerializeMap = Self;
+    // type SerializeStruct = Self;
+    // type SerializeStructVariant = Self;
+
+    type SerializeSeq = Compound<'a, W>;
+    type SerializeTuple = Compound<'a, W>;
+    type SerializeTupleStruct = Compound<'a, W>;
+    type SerializeTupleVariant = Compound<'a, W>;
+    type SerializeMap = Compound<'a, W>;
+    type SerializeStruct = Compound<'a, W>;
+    type SerializeStructVariant = Compound<'a, W>;
+
 
     fn serialize_bool(self, v: bool) -> Result<()> { self.write_boolean(v) }
 
@@ -330,7 +339,7 @@ where
         match _len {
             Some(n) => {
                 self.write_list_header(n)?;
-                Ok(self)
+                Ok(Compound{ser: self})
             }
             None => {
                 Err(Error::Message(
@@ -347,7 +356,7 @@ where
                 let length = 2 * l;
                 self.write_code(codes::MAP)?;
                 self.write_list_header(length)?;
-                Ok(self)
+                Ok(Compound{ser: self})
             }
             None => {
                 Err(Error::Message(
@@ -415,7 +424,7 @@ where
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
         variant.serialize(&mut *self)?;
-        Ok(self)
+        Ok(Compound{ser: self})
     }
 
     // Struct variants are represented in JSON as `{ NAME: { K: V, ... } }`.
@@ -428,12 +437,18 @@ where
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         variant.serialize(&mut *self)?;
-        Ok(self)
+        Ok(Compound{ser: self})
     }
 }
 
 
-impl<'a,W> ser::SerializeSeq for &'a mut Serializer<W>
+
+pub struct Compound<'a, W: 'a>{
+    ser: &'a mut Serializer<W>
+}
+
+//&'a mut
+impl<'a,W> ser::SerializeSeq for Compound<'a,W>
 where
     W: IWriteBytes,
 {
@@ -443,13 +458,13 @@ where
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut **self)
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a,W> ser::SerializeTuple for &'a mut Serializer<W>
+impl<'a,W> ser::SerializeTuple for Compound<'a,W>
 where
     W: IWriteBytes,
 {
@@ -459,13 +474,13 @@ where
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut **self)
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a,W> ser::SerializeTupleStruct for &'a mut Serializer<W>
+impl<'a,W> ser::SerializeTupleStruct for Compound<'a,W>
 where
     W: IWriteBytes,
 {
@@ -475,13 +490,13 @@ where
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut **self)
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a,W> ser::SerializeTupleVariant for &'a mut Serializer<W>
+impl<'a,W> ser::SerializeTupleVariant for Compound<'a,W>
 where
     W: IWriteBytes,
 {
@@ -491,7 +506,7 @@ where
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut **self)
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
@@ -499,7 +514,7 @@ where
 
 
 // missing optional `serialize_entry` method allows serializers to optimize for the case where kv both available
-impl<'a,W> ser::SerializeMap for &'a mut Serializer<W>
+impl<'a,W> ser::SerializeMap for Compound<'a,W>
 where
     W: IWriteBytes,
 {
@@ -510,20 +525,20 @@ where
     fn serialize_key<T>(&mut self, key: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        key.serialize(&mut **self)
+        key.serialize(&mut *self.ser)
     }
 
     fn serialize_value<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut **self)
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
 }
 
 // Structs are like maps in which the keys are constrained to be compile-time constant strings
-impl<'a,W> ser::SerializeStruct for &'a mut Serializer<W>
+impl<'a,W> ser::SerializeStruct for Compound<'a,W>
 where
     W: IWriteBytes,
 {
@@ -533,14 +548,14 @@ where
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        key.serialize(&mut **self)?;
-        value.serialize(&mut **self)
+        key.serialize(&mut *self.ser)?;
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a,W> ser::SerializeStructVariant for &'a mut Serializer<W>
+impl<'a,W> ser::SerializeStructVariant for Compound<'a,W>
 where
     W: IWriteBytes,
 {
@@ -550,8 +565,8 @@ where
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        key.serialize(&mut **self)?;
-        value.serialize(&mut **self)
+        key.serialize(&mut *self.ser)?;
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
