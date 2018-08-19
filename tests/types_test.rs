@@ -109,6 +109,8 @@ fn sym_test(){
     let test_value: SYM = serde_fressian::de::from_vec(&control_bytes).unwrap();
     assert_eq!(test_value, control_value);
 
-    // let test_bytes: Vec<u8> = serde_fressian::ser::to_vec(&control_value).unwrap();
-    // assert_eq!(test_bytes, control_bytes);
+    let test_bytes: Vec<u8> = serde_fressian::ser::to_vec(&control_value).unwrap();
+    assert_eq!(test_bytes, control_bytes);
+
+    assert_eq!(control_value,serde_fressian::de::from_vec(&test_bytes).unwrap())
 }

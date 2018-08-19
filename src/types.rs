@@ -176,13 +176,14 @@ pub mod REGEX {
 }
 
 
-// see https://github.com/mozilla/mentat/blob/master/edn/src/symbols.rs
-// going simple for now
 pub mod SYM {
 
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer, SerializeStruct};
 
+    // TODO investigate https://github.com/mozilla/mentat/blob/master/edn/src/symbols.rs
+    // going simple for now
+    // not clear if any advantages to full struct
     #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
     pub struct SYM(String,String);
     // pub struct SYM {
@@ -200,14 +201,12 @@ pub mod SYM {
         }
     }
 
-
     impl<'de> Deserialize<'de> for SYM {
         fn deserialize<D>(deserializer: D) -> Result<SYM, D::Error>
             where D: Deserializer<'de>,
         {
-            //is vector right what to do this?
+            // is vector right way to do this?
             // [namespace, name]
-            println!("=======>DE SYM!");
             let mut v: Vec<String> = Vec::deserialize(deserializer)?;
 
             let name = v.pop();
@@ -230,7 +229,6 @@ pub mod SYM {
         where
             S: Serializer,
         {
-            println!("serializing SYM!");
             let mut state = serializer.serialize_tuple_struct("SYM", 2)?;
             state.serialize_field(&self.0)?;
             state.serialize_field(&self.1)?;

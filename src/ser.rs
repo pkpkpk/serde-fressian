@@ -339,7 +339,7 @@ where
         match _len {
             Some(n) => {
                 self.write_list_header(n)?;
-                Ok(Compound{ser: self})
+                Ok(Compound::LIST{ser: self, cache_elements: false})
             }
             None => {
                 Err(Error::Message(
@@ -356,7 +356,7 @@ where
                 let length = 2 * l;
                 self.write_code(codes::MAP)?;
                 self.write_list_header(length)?;
-                Ok(Compound{ser: self})
+                Ok(Compound::MAP{ser: self})
             }
             None => {
                 Err(Error::Message(
@@ -406,12 +406,22 @@ where
     }
 
     // Tuple structs look just like sequences in JSON.
-    fn serialize_tuple_struct(
-        self,
-        _name: &'static str,
-        len: usize,
-    ) -> Result<Self::SerializeTupleStruct> {
-        self.serialize_seq(Some(len))
+    // fn serialize_tuple_struct(
+    //     self,
+    //     _name: &'static str,
+    //     len: usize,
+    // ) -> Result<Self::SerializeTupleStruct> {
+    //     self.serialize_seq(Some(len))
+    // }
+
+    fn serialize_tuple_struct(self,_name: &'static str, len: usize,) -> Result<Self::SerializeTupleStruct> {
+        match _name {
+            "SYM" => {
+                self.write_code(codes::SYM)?;
+                Ok(Compound::LIST{ser: self, cache_elements: true})
+            }
+            _ => self.serialize_seq(Some(len))
+        }
     }
 
     // Tuple variants are represented in JSON as `{ NAME: [DATA...] }`. Again
@@ -424,7 +434,7 @@ where
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
         variant.serialize(&mut *self)?;
-        Ok(Compound{ser: self})
+        Ok(Compound::LIST{ser: self, cache_elements: false})
     }
 
     // Struct variants are represented in JSON as `{ NAME: { K: V, ... } }`.
@@ -437,17 +447,22 @@ where
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         variant.serialize(&mut *self)?;
-        Ok(Compound{ser: self})
+        Ok(Compound::LIST{ser: self, cache_elements: false})
     }
 }
 
 
 
-pub struct Compound<'a, W: 'a>{
-    ser: &'a mut Serializer<W>
+pub enum Compound<'a, W: 'a> {
+    LIST {
+        ser: &'a mut Serializer<W>,
+        cache_elements: bool
+    },
+    MAP {
+        ser: &'a mut Serializer<W>
+    }
 }
 
-//&'a mut
 impl<'a,W> ser::SerializeSeq for Compound<'a,W>
 where
     W: IWriteBytes,
@@ -458,7 +473,23 @@ where
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut *self.ser)
+        // value.serialize(&mut *self.ser)
+        match *self {
+            Compound::LIST {
+                ref mut ser,
+                cache_elements,
+            } => {
+                if cache_elements {
+                    ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+                }
+                value.serialize(&mut **ser)
+            }
+
+            Compound::MAP {ref mut ser} => {
+                value.serialize(&mut **ser)
+            }
+        }
+
     }
 
     fn end(self) -> Result<()> { Ok(()) }
@@ -474,7 +505,7 @@ where
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut *self.ser)
+        ser::SerializeSeq::serialize_element(self, value)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
@@ -490,7 +521,7 @@ where
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut *self.ser)
+        ser::SerializeSeq::serialize_element(self, value)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
@@ -506,7 +537,7 @@ where
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut *self.ser)
+        ser::SerializeSeq::serialize_element(self, value)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
@@ -525,13 +556,15 @@ where
     fn serialize_key<T>(&mut self, key: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        key.serialize(&mut *self.ser)
+        // key.serialize(&mut *self.ser)
+        ser::SerializeSeq::serialize_element(self, key)
     }
 
     fn serialize_value<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        value.serialize(&mut *self.ser)
+        // value.serialize(&mut *self.ser)
+        ser::SerializeSeq::serialize_element(self, value)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
@@ -548,8 +581,10 @@ where
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        key.serialize(&mut *self.ser)?;
-        value.serialize(&mut *self.ser)
+        // key.serialize(&mut *self.ser)?;
+        // value.serialize(&mut *self.ser)
+        ser::SerializeSeq::serialize_element(self, key)?;
+        ser::SerializeSeq::serialize_element(self, value)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
@@ -565,8 +600,10 @@ where
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        key.serialize(&mut *self.ser)?;
-        value.serialize(&mut *self.ser)
+        // key.serialize(&mut *self.ser)?;
+        // value.serialize(&mut *self.ser)
+        ser::SerializeSeq::serialize_element(self, key)?;
+        ser::SerializeSeq::serialize_element(self, value)
     }
 
     fn end(self) -> Result<()> { Ok(()) }
