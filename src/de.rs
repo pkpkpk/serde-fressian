@@ -200,6 +200,11 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_seq(FixedListReader::new(self, 2))
             }
 
+            codes::KEY => {
+                // expect  PUT_PRIORITY_CACHE | STRING | PUT_PRIORITY_CACHE | STRING
+                visitor.visit_seq(FixedListReader::new(self, 2))
+            }
+
             codes::PUT_PRIORITY_CACHE => {
                 // cache here?
                 self.deserialize_any(visitor)

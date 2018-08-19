@@ -420,6 +420,10 @@ where
                 self.write_code(codes::SYM)?;
                 Ok(Compound::LIST{ser: self, cache_elements: true})
             }
+            "KEY" => {
+                self.write_code(codes::KEY)?;
+                Ok(Compound::LIST{ser: self, cache_elements: true})
+            }
             _ => self.serialize_seq(Some(len))
         }
     }

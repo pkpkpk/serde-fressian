@@ -237,8 +237,58 @@ pub mod SYM {
     }
 }
 
+pub mod KEY {
 
-// KEY
+    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::ser::{Serialize, Serializer, SerializeStruct};
+
+    //same as SYM above
+    #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
+    pub struct KEY(String,String);
+
+    impl KEY {
+        pub fn new(namespace: String, name: String) -> Self {
+            KEY(namespace, name)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for KEY {
+        fn deserialize<D>(deserializer: D) -> Result<KEY, D::Error>
+            where D: Deserializer<'de>,
+        {
+            // is vector right way to do this?
+            // [namespace, name]
+            let mut v: Vec<String> = Vec::deserialize(deserializer)?;
+
+            let name = v.pop();
+            let namespace = v.pop();
+
+            match (name, namespace) {
+                (Some(name), Some(namespace)) => {
+                    Ok(KEY::new(namespace, name))
+                }
+                _ => Err(Error::custom("bad symbol"))
+            }
+        }
+    }
+
+    use serde::ser::SerializeTupleStruct;
+    use imp::codes;
+
+    impl Serialize for KEY {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let mut state = serializer.serialize_tuple_struct("KEY", 2)?;
+            state.serialize_field(&self.0)?;
+            state.serialize_field(&self.1)?;
+            state.end()
+        }
+    }
+}
+
+
 // INT_ARRAY
 // LONG_ARRAY
 // FLOAT_ARRAY

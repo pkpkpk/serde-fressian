@@ -29,7 +29,8 @@ pub use types::{
     UUID,
     URI,
     REGEX,
-    SYM
+    SYM,
+    KEY,
 };
 
 

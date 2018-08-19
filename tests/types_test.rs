@@ -114,3 +114,20 @@ fn sym_test(){
 
     assert_eq!(control_value,serde_fressian::de::from_vec(&test_bytes).unwrap())
 }
+
+#[test]
+fn key_test(){
+    use serde_fressian::KEY::{KEY};
+
+    // (api/write :foo/bar)
+    let control_bytes: Vec<u8> = vec![202,205,221,102,111,111,205,221,98,97,114];
+    let control_value: KEY = KEY::new("foo".to_string(), "bar".to_string());
+
+    let test_value: KEY = serde_fressian::de::from_vec(&control_bytes).unwrap();
+    assert_eq!(test_value, control_value);
+
+    let test_bytes: Vec<u8> = serde_fressian::ser::to_vec(&control_value).unwrap();
+    assert_eq!(test_bytes, control_bytes);
+
+    assert_eq!(control_value,serde_fressian::de::from_vec(&test_bytes).unwrap())
+}
