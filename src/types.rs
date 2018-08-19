@@ -174,3 +174,76 @@ pub mod REGEX {
         }
     }
 }
+
+
+// see https://github.com/mozilla/mentat/blob/master/edn/src/symbols.rs
+// going simple for now
+pub mod SYM {
+
+    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::ser::{Serialize, Serializer, SerializeStruct};
+
+    #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
+    pub struct SYM(String,String);
+    // pub struct SYM {
+    //     namespace: String,
+    //     name: String
+    // }
+
+    impl SYM {
+        pub fn new(namespace: String, name: String) -> Self {
+            SYM(namespace, name)
+            // SYM {
+            //     namespace: namespace,
+            //     name: name
+            // }
+        }
+    }
+
+
+    impl<'de> Deserialize<'de> for SYM {
+        fn deserialize<D>(deserializer: D) -> Result<SYM, D::Error>
+            where D: Deserializer<'de>,
+        {
+            //is vector right what to do this?
+            // [namespace, name]
+            println!("=======>DE SYM!");
+            let mut v: Vec<String> = Vec::deserialize(deserializer)?;
+
+            let name = v.pop();
+            let namespace = v.pop();
+
+            match (name, namespace) {
+                (Some(name), Some(namespace)) => {
+                    Ok(SYM::new(namespace, name))
+                }
+                _ => Err(Error::custom("bad symbol"))
+            }
+        }
+    }
+
+    use serde::ser::SerializeTupleStruct;
+    use imp::codes;
+
+    impl Serialize for SYM {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            println!("serializing SYM!");
+            let mut state = serializer.serialize_tuple_struct("SYM", 2)?;
+            state.serialize_field(&self.0)?;
+            state.serialize_field(&self.1)?;
+            state.end()
+        }
+    }
+}
+
+
+// KEY
+// INT_ARRAY
+// LONG_ARRAY
+// FLOAT_ARRAY
+// DOUBLE_ARRAY
+// BOOLEAN_ARRAY
+// OBJECT_ARRAY

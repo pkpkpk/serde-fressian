@@ -195,6 +195,24 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_string(self.rawIn.read_string(&mut self.rdr)?)
             }
 
+            codes::SYM => {
+                // expect  PUT_PRIORITY_CACHE | STRING | PUT_PRIORITY_CACHE | STRING
+                visitor.visit_seq(FixedListReader::new(self, 2))
+            }
+
+            codes::PUT_PRIORITY_CACHE => {
+                // cache here?
+                self.deserialize_any(visitor)
+            }
+
+
+            // codes::INT_ARRAY | codes::LONG_ARRAY | codes::FLOAT_ARRAY
+            // | codes::DOUBLE_ARRAY | codes::BOOLEAN_ARRAY | codes::OBJECT_ARRAY
+            // => {
+            //     visit_list(self, visitor)
+            // }
+
+
             _ => Err(Error::UnmatchedCode(code as u8)),
         }
     }
@@ -202,9 +220,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     serde::forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
         bytes byte_buf option unit unit_struct newtype_struct
-         seq
-         tuple
-        tuple_struct map struct enum identifier ignored_any
+        seq tuple tuple_struct map struct enum identifier ignored_any
     }
 
 }
