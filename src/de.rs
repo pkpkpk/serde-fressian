@@ -211,11 +211,12 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
 
 
-            // codes::INT_ARRAY | codes::LONG_ARRAY | codes::FLOAT_ARRAY
-            // | codes::DOUBLE_ARRAY | codes::BOOLEAN_ARRAY | codes::OBJECT_ARRAY
-            // => {
-            //     visit_list(self, visitor)
-            // }
+            codes::INT_ARRAY | codes::LONG_ARRAY | codes::FLOAT_ARRAY
+            | codes::DOUBLE_ARRAY | codes::BOOLEAN_ARRAY | codes::OBJECT_ARRAY
+            => {
+                let length = self.rawIn.read_count(&mut self.rdr)?;
+                visitor.visit_seq(FixedListReader::new(self, length as usize))
+            }
 
 
             _ => Err(Error::UnmatchedCode(code as u8)),

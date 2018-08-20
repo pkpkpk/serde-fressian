@@ -179,7 +179,7 @@ pub mod REGEX {
 pub mod SYM {
 
     use serde::de::{Deserializer, Deserialize, Error};
-    use serde::ser::{Serialize, Serializer, SerializeStruct};
+    use serde::ser::{Serialize, Serializer};
 
     // TODO investigate https://github.com/mozilla/mentat/blob/master/edn/src/symbols.rs
     // going simple for now
@@ -240,7 +240,7 @@ pub mod SYM {
 pub mod KEY {
 
     use serde::de::{Deserializer, Deserialize, Error};
-    use serde::ser::{Serialize, Serializer, SerializeStruct};
+    use serde::ser::{Serialize, Serializer};
 
     //same as SYM above
     #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
@@ -288,10 +288,155 @@ pub mod KEY {
     }
 }
 
+pub mod typed_arrays {
 
-// INT_ARRAY
-// LONG_ARRAY
-// FLOAT_ARRAY
-// DOUBLE_ARRAY
-// BOOLEAN_ARRAY
-// OBJECT_ARRAY
+    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::ser::{Serialize, Serializer};
+
+    #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
+    pub struct Int_Array (Vec<i32>);
+
+    impl Int_Array {
+        pub fn from_vec(v: Vec<i32>) -> Self {
+            Int_Array(v)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Int_Array {
+        fn deserialize<D>(deserializer: D) -> Result<Int_Array, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let v: Vec<i32> = Vec::deserialize(deserializer)?;
+
+            Ok(Int_Array(v))
+        }
+    }
+
+    impl Serialize for Int_Array {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("INT_ARRAY", &self.0)
+        }
+    }
+
+
+    #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
+    pub struct Long_Array (Vec<i64>);
+
+    impl Long_Array {
+        pub fn from_vec(v: Vec<i64>) -> Self {
+            Long_Array(v)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Long_Array {
+        fn deserialize<D>(deserializer: D) -> Result<Long_Array, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let v: Vec<i64> = Vec::deserialize(deserializer)?;
+
+            Ok(Long_Array(v))
+        }
+    }
+
+    impl Serialize for Long_Array {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("LONG_ARRAY", &self.0)
+        }
+    }
+
+
+
+    #[derive(Shrinkwrap,Clone,Debug,PartialOrd,PartialEq)]
+    pub struct Float_Array (Vec<f32>);
+
+    impl Float_Array {
+        pub fn from_vec(v: Vec<f32>) -> Self {
+            Float_Array(v)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Float_Array {
+        fn deserialize<D>(deserializer: D) -> Result<Float_Array, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let v: Vec<f32> = Vec::deserialize(deserializer)?;
+
+            Ok(Float_Array(v))
+        }
+    }
+
+    impl Serialize for Float_Array {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("FLOAT_ARRAY", &self.0)
+        }
+    }
+
+
+
+    #[derive(Shrinkwrap,Clone,Debug,PartialOrd,PartialEq)]
+    pub struct Double_Array (Vec<f64>);
+
+    impl Double_Array {
+        pub fn from_vec(v: Vec<f64>) -> Self {
+            Double_Array(v)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Double_Array {
+        fn deserialize<D>(deserializer: D) -> Result<Double_Array, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let v: Vec<f64> = Vec::deserialize(deserializer)?;
+
+            Ok(Double_Array(v))
+        }
+    }
+
+    impl Serialize for Double_Array {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("DOUBLE_ARRAY", &self.0)
+        }
+    }
+
+
+    #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
+    pub struct Boolean_Array (Vec<bool>);
+
+    impl Boolean_Array {
+        pub fn from_vec(v: Vec<bool>) -> Self {
+            Boolean_Array(v)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Boolean_Array {
+        fn deserialize<D>(deserializer: D) -> Result<Boolean_Array, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let v: Vec<bool> = Vec::deserialize(deserializer)?;
+
+            Ok(Boolean_Array(v))
+        }
+    }
+
+    impl Serialize for Boolean_Array {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("BOOLEAN_ARRAY", &self.0)
+        }
+    }
+}
+

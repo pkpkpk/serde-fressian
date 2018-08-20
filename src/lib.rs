@@ -31,6 +31,7 @@ pub use types::{
     REGEX,
     SYM,
     KEY,
+    typed_arrays
 };
 
 

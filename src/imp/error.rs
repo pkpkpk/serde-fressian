@@ -11,6 +11,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 pub enum Error {
     Message(String),
     UnmatchedCode(u8),
+    UnsupportedType,
     Eof,
     Syntax,
 }
