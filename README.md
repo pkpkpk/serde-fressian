@@ -3,6 +3,8 @@ Fressian is a self-describing binary serialization format developed for clojure.
 
 ## wasm⥪fressian⥭cljs
 
+When compiled for WebAssembly, serde-fressian can be used to convey rich values to and from clojurescript. For more info see [serde-fressian-wasm-demo/README.md](serde-fressian-wasm-demo/README.md)
+
 ## About
 
 ## WIP
@@ -35,11 +37,11 @@ Fressian is a self-describing binary serialization format developed for clojure.
 
 
 ### TODO
-+ restore footer
++ ~~restore footer~~
 + wasm API
   - exported write_byte
   - exported reset() method
-  - reset, caching, footer ergonomics
+  - caching, footer ergonomics
   - usage patterns
 + fix nonsensical error types
 + value wrapper for heterogeneous colls
@@ -61,7 +63,7 @@ Fressian is a self-describing binary serialization format developed for clojure.
 + checksum
 + type profiles (no inst etc)
 + document integers safety
-+ preventing information loss
++ identify lossy types
 + raw utf8 flag
 + serde limitations
   - using newtype attr flags
@@ -75,6 +77,7 @@ Fressian is a self-describing binary serialization format developed for clojure.
 + uncompressed ints, typed arrays
 + empty string test for both fressian strings and utf8
 + array-seq for all native typed arrays
++ fress-js
 
 ## Serde for Clojurists
   + strongly typed
@@ -84,38 +87,38 @@ Fressian is a self-describing binary serialization format developed for clojure.
 
 
 ### rust serde types --> clojure runtime values
-| Serde           |                    | Serde JSON          | Fressian| cljs | clj
+| Serde           |      rust          | Fressian| cljs | clj | Serde JSON          
 |-----------------|--------------------|---------------------|---------|---------------|--------------
-| unit            |                    |                     |  NULL   | nil           | nil   
-| bool            |                    |                     |  T/F    | bool          | bool  
-| i8              |                    |                     |  INT    | number        | long  
-| i16             |                    |                     |  INT    | number        | long  
-| i32             |                    |                     |  INT    | number        | long  
-| i64             |                    |                     |  INT    | **glong?**    | long  
-| i128            |                    |                     |  BIGINT | **TODO**      | bigint
-| u8              |                    |                     |  INT    | number        | long
-| u16             |                    |                     |  INT    | number        | long
-| u32             |                    |                     |  INT    | number        | long
-| u64             |                    |                     |  INT    | **glong? **   | ulong(java 8+)?
-| u128            |                    |                     |  BIGINT | **TODO**      | bigint
-| f32             |                    |                     |  FLOAT  | number        | float
-| f64             |                    |                     |  DOUBLE | number        | double
-| char            |                    |                     |  "char" | **TODO**      | char
-| string          |                    |                     |  STRING | string        | string
-|      \\-->      |                    |                     |  UTF8   | string        | tag -> string
-| [u8]            |                    |                     |  BYTES  | byte-array    | byte-array
-| Option<value>   |                    |                     |  ?value | ?value        | ?value
-| unit_struct     |struct Z;           |`null`               |  NULL   | nil           |
-| unit_variant    |E::Z                |`"Z"`                |  KEY    | keyword       |
-| newtype_struct  |Y(i32)              |`0`                  |         |               |
-| newtype_variant |E::Y(0)             |`{"Y":0}`            |         |               |
-| tuple           |                    |                     |  list   | list          |
-| tuple_struct    |`X(i32, i32)`       |`[0,0]`              |  rec    | record? list? |
-| tuple_variant   |`E::X(0, 0)`        |`{"X":[0,0]}`        |  rec    | record? list? |
-| struct          |`W { a: 0, b: 0}`   |`{"a":0,"b":0}`      |  STRUCT | struct?       |
-| struct_variant  |`E::W { a: 0, b: 0}`|`{"W":{"a":0,"b":0}}`|         | struct?       |
-| seq             |                    |                     |  LIST.. | list; open    |
-| map             |                    |                     |         | map; open     |
+| unit            |                    |  NULL   | nil           | nil   
+| bool            |                    |  T/F    | bool          | bool  
+| i8              |                    |  INT    | number        | long  
+| i16             |                    |  INT    | number        | long  
+| i32             |                    |  INT    | number        | long  
+| i64             |                    |  INT    | **glong?**    | long  
+| i128            |                    |  BIGINT | **TODO**      | bigint
+| u8              |                    |  INT    | number        | long
+| u16             |                    |  INT    | number        | long
+| u32             |                    |  INT    | number        | long
+| u64             |                    |  INT    | **glong? **   | ulong(java 8+)?
+| u128            |                    |  BIGINT | **TODO**      | bigint
+| f32             |                    |  FLOAT  | number        | float
+| f64             |                    |  DOUBLE | number        | double
+| char            |                    |  "char" | **TODO**      | char
+| string          |                    |  STRING | string        | string
+|      \\-->      |                    |  UTF8   | string        | tag -> string
+| [u8]            |                    |  BYTES  | byte-array    | byte-array
+| Option<value>   |                    |  ?value | ?value        | ?value
+| unit_struct     |struct Z;           |  NULL   | nil           | |`null`               
+| unit_variant    |E::Z                |  KEY    | keyword       | |`"Z"`                
+| newtype_struct  |Y(i32)              |         |               | |`0`                  
+| newtype_variant |E::Y(0)             |         |               | |`{"Y":0}`            
+| tuple           |                    |  list   | list          | |
+| tuple_struct    |`X(i32, i32)`       |  rec    | record? list? | |`[0,0]`
+| tuple_variant   |`E::X(0, 0)`        |  rec    | record? list? | |`{"X":[0,0]}`
+| struct          |`W { a: 0, b: 0}`   |  STRUCT | struct?       | |`{"a":0,"b":0}`
+| struct_variant  |`E::W { a: 0, b: 0}`|         | struct?       | |`{"W":{"a":0,"b":0}}`
+| seq             |                    |  LIST.. | list; open    | |
+| map             |                    |         | map; open     | |
 
 
 + tuple
