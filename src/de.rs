@@ -35,7 +35,6 @@ impl<'de> Deserializer<'de>
         RawInput.peek_next_code(&mut self.rdr)
     }
 
-    // write-byte
     // reset
 }
 
@@ -149,7 +148,6 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             //////////////////////////////////////////////////////////////////////
 
             codes::MAP => {
-                // visitvisit_list(self, visitor)
                 let list_code = self.read_next_code()?;
                 match list_code as u8 {
                     codes::LIST_PACKED_LENGTH_START..=235 => {
@@ -442,9 +440,7 @@ impl<'de, 'a> SeqAccess<'de> for OpenListReader<'a, 'de> {
             return Err(Error::Message("attempted reading past list end".to_string()))
         };
 
-        let next_code = self.de.peek_next_code();
-
-        match next_code {
+        match self.de.peek_next_code() {
             Ok(code) => {
                 if code as u8 == codes::END_COLLECTION {
                     self.finished = true;

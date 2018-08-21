@@ -21,8 +21,8 @@ pub const INST: u8 = 0xC8; //200
 pub const SYM: u8 = 0xC9; //201
 pub const KEY: u8 = 0xCA; // 202
 pub const GET_PRIORITY_CACHE: u8 = 0xCC; //204
-pub const PUT_PRIORITY_CACHE: u8 = 0xCD;
-pub const PRECACHE: u8 = 0xCE;
+pub const PUT_PRIORITY_CACHE: u8 = 0xCD; //205
+pub const PRECACHE: u8 = 0xCE; //206
 pub const FOOTER: u8 = 0xCF; //207
 pub const FOOTER_MAGIC: i64 = 0xCFCFCFCF; //3486502863//////////////////////////////////
 pub const BYTES_PACKED_LENGTH_START: u8 = 0xD0; //208
@@ -72,23 +72,3 @@ pub const INT_PACKED_6_END: u8 = 0x7C; //124
 pub const INT_PACKED_7_START: u8 = 0x7C;
 pub const INT_PACKED_7_ZERO: u8 = 0x7E;
 pub const INT_PACKED_7_END: u8 = 0x80;
-
-// (def tag->code
-//   {
-//    ; "utf8"     UTF8
-//     "map"      MAP
-//     "set"      SET
-//     "uuid"     _UUID
-//     "regex"    REGEX
-//     "uri"      URI
-//     "bigint"   BIGINT
-//     "bigdec"   BIGDEC
-//     "inst"     INST
-//     "sym"      SYM
-//     "key"      KEY
-//     "int[]"    INT_ARRAY
-//     "float[]"  FLOAT_ARRAY
-//     "double[]" DOUBLE_ARRAY
-//     "long[]"   LONG_ARRAY
-//     "boolean[]" BOOLEAN_ARRAY
-//     "Object[]" OBJECT_ARRAY})
