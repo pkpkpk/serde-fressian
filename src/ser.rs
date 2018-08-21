@@ -250,14 +250,6 @@ where
 {
     type Ok = ();
     type Error = Error;
-    // type SerializeSeq = Self;
-    // type SerializeTuple = Self;
-    // type SerializeTupleStruct = Self;
-    // type SerializeTupleVariant = Self;
-    // type SerializeMap = Self;
-    // type SerializeStruct = Self;
-    // type SerializeStructVariant = Self;
-
     type SerializeSeq = Compound<'a, W>;
     type SerializeTuple = Compound<'a, W>;
     type SerializeTupleStruct = Compound<'a, W>;
@@ -496,9 +488,10 @@ where
                 cache_elements,
             } => {
                 if cache_elements {
-                    ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+                    value.serialize(CachingSerializer{ser: ser})
+                } else {
+                    value.serialize(&mut **ser)
                 }
-                value.serialize(&mut **ser)
             }
 
             Compound::MAP {ref mut ser} => {
@@ -695,12 +688,12 @@ where
 
     #[inline]
     fn serialize_f32(self, _value: f32) -> Result<()> {
-        self.ser.write_int(_value as i64)
+        self.ser.write_float(_value)
     }
 
     #[inline]
     fn serialize_f64(self, _value: f64) -> Result<()> {
-        self.ser.write_int(_value as i64)
+        self.ser.write_double(_value as f64)
     }
 
 
@@ -802,6 +795,209 @@ where
         Err(Error::UnsupportedType)
     }
 }
+/////////////////////////////////////////////////////////////////////////////
+
+// writes PUT_PRIORITY_CACHE and then defers serialization back to original deserializer
+struct CachingSerializer<'a, W: 'a>{
+    ser: &'a mut Serializer<W>
+}
+
+
+impl<'a, W> ser::Serializer for CachingSerializer<'a, W>
+where
+    W: IWriteBytes,
+{
+    type Ok = ();
+    type Error = Error;
+
+    type SerializeSeq = Compound<'a, W>;
+    type SerializeTuple = ser::Impossible<(), Error>;
+    type SerializeTupleStruct = ser::Impossible<(), Error>;
+    type SerializeTupleVariant = ser::Impossible<(), Error>;
+    type SerializeMap = ser::Impossible<(), Error>;
+    type SerializeStruct = ser::Impossible<(), Error>;
+    type SerializeStructVariant = ser::Impossible<(), Error>;
+
+    #[inline]
+    fn serialize_bool(self, _value: bool) -> Result<()> {
+        _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_none(self) -> Result<()> {
+         // serialized as null
+         self.ser.serialize_none()
+    }
+
+    #[inline]
+    fn serialize_some<S>(self, value: &S) -> Result<()>
+    where S: ?Sized + Serialize, {
+         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+         value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_unit(self) -> Result<()> {
+         // serialized as null
+         self.ser.serialize_unit()
+    }
+
+    #[inline]
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
+        // serialized as null
+        self.ser.serialize_unit_struct(_name)
+    }
+
+    #[inline]
+    fn serialize_f32(self, _value: f32) -> Result<()> {
+        if !( (_value == 0.0) | (_value == 1.0)) {
+            self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        }
+        _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_f64(self, _value: f64) -> Result<()> {
+        if !( (_value == 0.0) | (_value == 1.0)) {
+            self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        }
+        _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_str(self, _value: &str) -> Result<()> {
+        if _value.len() != 0 {
+            self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        }
+        _value.serialize(self.ser)
+    }
+
+    /////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////
+
+    #[inline]
+    fn serialize_i8(self, _value: i8) -> Result<()> {
+        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_i16(self, _value: i16) -> Result<()> {
+        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_i32(self, _value: i32) -> Result<()> {
+        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_i64(self, _value: i64) -> Result<()> {
+        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
+        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        self.ser.serialize_seq(_len)
+    }
+
+    #[inline]
+    fn serialize_u8(self, _value: u8) -> Result<()> {
+        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_u16(self, _value: u16) -> Result<()> {
+         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+         _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_u32(self, _value: u32) -> Result<()> {
+         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+         _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_u64(self, _value: u64) -> Result<()> {
+         // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+         // _value.serialize(self.ser)
+         Err(Error::UnsupportedType)
+    }
+
+    #[inline]
+    fn serialize_char(self, _value: char) -> Result<()> {
+        // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        // _value.serialize(self.ser)
+        Err(Error::UnsupportedType)
+    }
+
+    #[inline]
+    fn serialize_bytes(self, data: &[u8]) -> Result<()> {
+         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+         self.ser.serialize_bytes(data)
+    }
+
+    #[inline]
+    fn serialize_unit_variant(self, _name: &'static str, _variant_index: u32, variant: &'static str) -> Result<()> {
+         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+         // _value.serialize(self.ser)
+         self.ser.serialize_unit_variant(_name, _variant_index, variant)
+    }
+
+    #[inline]
+    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<()>
+    where T: ?Sized + Serialize, {
+         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+         self.ser.serialize_newtype_struct(_name, value)
+    }
+
+    #[inline]
+    fn serialize_newtype_variant<T>(self,_name: &'static str,_variant_index: u32,variant: &'static str,value: &T,) -> Result<()>
+    where T: ?Sized + Serialize, {
+         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+         self.ser.serialize_newtype_variant(_name, _variant_index, variant, value)
+    }
+
+    #[inline]
+    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
+        Err(Error::UnsupportedType)
+    }
+
+    #[inline]
+    fn serialize_tuple_struct(self,_name: &'static str, len: usize,) -> Result<Self::SerializeTupleStruct> {
+        Err(Error::UnsupportedType)
+    }
+
+    #[inline]
+    fn serialize_tuple_variant(self,_name: &'static str,_variant_index: u32,variant: &'static str,_len: usize, ) -> Result<Self::SerializeTupleVariant> {
+         Err(Error::UnsupportedType)
+    }
+
+    #[inline]
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
+        Err(Error::UnsupportedType)
+    }
+
+    #[inline]
+    fn serialize_struct( self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
+        Err(Error::UnsupportedType)
+    }
+
+    #[inline]
+    fn serialize_struct_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self::SerializeStructVariant> {
+        Err(Error::UnsupportedType)
+    }
+
+}
+
+
+
 
 //////////////////////////////////////////////////////
 // from serde/src/ser/mod.rs

@@ -202,7 +202,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
             codes::KEY => {
                 // expect  PUT_PRIORITY_CACHE | STRING | PUT_PRIORITY_CACHE | STRING
-                visitor.visit_seq(FixedListReader::new(self, 2))
+                visitor.visit_seq(FixedListReader::new_nullable(self, 2))
             }
 
             codes::PUT_PRIORITY_CACHE => {
@@ -225,9 +225,29 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     serde::forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct
+        bytes byte_buf
+        // option
+        unit unit_struct newtype_struct
         seq tuple tuple_struct map struct enum identifier ignored_any
     }
+
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
+        where
+            V: Visitor<'de>,
+    {
+        match self.peek_next_code()? as u8 {
+            codes::NULL => {
+                let _ = self.read_next_code()?;
+                visitor.visit_none()
+            }
+            _ => {
+                visitor.visit_some(self)
+            }
+        }
+    }
+
+
+
 
 }
 
@@ -262,7 +282,8 @@ fn visit_list<'a, 'de, V>(de: &'a mut Deserializer<'de>, visitor: V) -> Result<V
 struct FixedListReader<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
     length: usize,
-    items_read: usize
+    items_read: usize,
+    nullable: bool
 }
 
 impl<'a, 'de> FixedListReader<'a, 'de> {
@@ -271,6 +292,16 @@ impl<'a, 'de> FixedListReader<'a, 'de> {
             de,
             length: length,
             items_read: 0,
+            nullable: false
+        }
+    }
+
+    fn new_nullable(de: &'a mut Deserializer<'de>, length: usize) -> Self {
+        FixedListReader {
+            de,
+            length: length,
+            items_read: 0,
+            nullable: true
         }
     }
 

@@ -185,14 +185,14 @@ pub mod SYM {
     // going simple for now
     // not clear if any advantages to full struct
     #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
-    pub struct SYM(String,String);
+    pub struct SYM(Option<String>,String);
     // pub struct SYM {
     //     namespace: String,
     //     name: String
     // }
 
     impl SYM {
-        pub fn new(namespace: String, name: String) -> Self {
+        pub fn new(namespace: Option<String>, name: String) -> Self {
             SYM(namespace, name)
             // SYM {
             //     namespace: namespace,
@@ -207,14 +207,14 @@ pub mod SYM {
         {
             // is vector right way to do this?
             // [namespace, name]
-            let mut v: Vec<String> = Vec::deserialize(deserializer)?;
+            let mut v: Vec< Option<String> > = Vec::deserialize(deserializer)?;
 
-            let name = v.pop();
-            let namespace = v.pop();
+            let name: Option<Option<String>> = v.pop();
+            let namespace: Option<Option<String>> = v.pop();
 
-            match (name, namespace) {
-                (Some(name), Some(namespace)) => {
-                    Ok(SYM::new(namespace, name))
+            match (namespace,name) {
+                (Some(namespace_opt),Some(Some(name_string))) => {
+                    Ok(SYM::new(namespace_opt, name_string))
                 }
                 _ => Err(Error::custom("bad symbol"))
             }
@@ -230,8 +230,11 @@ pub mod SYM {
             S: Serializer,
         {
             let mut state = serializer.serialize_tuple_struct("SYM", 2)?;
-            state.serialize_field(&self.0)?;
-            state.serialize_field(&self.1)?;
+            let namespace: &Option<String> = &self.0;
+            let name: &String = &self.1;
+
+            state.serialize_field(namespace)?;
+            state.serialize_field(name)?;
             state.end()
         }
     }
@@ -244,10 +247,10 @@ pub mod KEY {
 
     //same as SYM above
     #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
-    pub struct KEY(String,String);
+    pub struct KEY(Option<String>,String);
 
     impl KEY {
-        pub fn new(namespace: String, name: String) -> Self {
+        pub fn new(namespace: Option<String>, name: String) -> Self {
             KEY(namespace, name)
         }
     }
@@ -258,14 +261,14 @@ pub mod KEY {
         {
             // is vector right way to do this?
             // [namespace, name]
-            let mut v: Vec<String> = Vec::deserialize(deserializer)?;
+            let mut v: Vec< Option<String>> = Vec::deserialize(deserializer)?;
 
-            let name = v.pop();
-            let namespace = v.pop();
+            let name: Option<Option<String>> = v.pop();
+            let namespace: Option<Option<String>> = v.pop();
 
-            match (name, namespace) {
-                (Some(name), Some(namespace)) => {
-                    Ok(KEY::new(namespace, name))
+            match (namespace,name) {
+                (Some(namespace_opt),Some(Some(name_string))) => {
+                    Ok(KEY::new(namespace_opt, name_string))
                 }
                 _ => Err(Error::custom("bad symbol"))
             }
