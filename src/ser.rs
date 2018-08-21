@@ -58,6 +58,17 @@ where
     Ok(serializer.to_vec())
 }
 
+//write to vec<u8> with footer
+pub fn to_vec_footer<T>(value: &T) -> Result<Vec<u8>>
+where
+    T: Serialize,
+{
+    let buf = Vec::with_capacity(100);
+    let mut serializer = Serializer::from_vec(buf);
+    value.serialize(&mut serializer)?;
+    serializer.write_footer()?;
+    Ok(serializer.to_vec())
+}
 
 pub trait FressianWriter {
 
@@ -79,7 +90,7 @@ pub trait FressianWriter {
 
     fn write_string(&mut self, s: &str) -> Result<()>;
 
-    // fn write_footer(&mut self) -> Result<()>;
+    fn write_footer(&mut self) -> Result<()>;
 
     fn begin_open_list(&mut self) -> Result<()>;
 
@@ -147,15 +158,15 @@ where
         self.rawOut.write_string(&mut self.writer,s)
     }
 
-    // fn write_footer(&mut self) -> Result<()> {
-    //     let length = self.rawOut.get_bytes_written();
-    //     // self.clear_caches()
-    //     self.rawOut.write_raw_i32(&mut self.writer,codes::FOOTER_MAGIC as i32)?;
-    //     self.rawOut.write_raw_i32(&mut self.writer,length as i32)?; //?
-    //     let checksum = 0; //rawOut.getChecksum().getValue()
-    //     self.rawOut.write_raw_i32(&mut self.writer,checksum)
-    //     // self.reset();
-    // }
+    fn write_footer(&mut self) -> Result<()> {
+        let length = self.writer.get_bytes_written();
+        // self.clear_caches()
+        self.rawOut.write_raw_i32(&mut self.writer,codes::FOOTER_MAGIC as i32)?;
+        self.rawOut.write_raw_i32(&mut self.writer,length as i32)?; //?
+        let checksum = 0; //rawOut.getChecksum().getValue()
+        self.rawOut.write_raw_i32(&mut self.writer, checksum)
+        // self.reset();
+    }
 
     fn begin_open_list(&mut self) -> Result<()> {
         self.write_code(codes::BEGIN_OPEN_LIST)

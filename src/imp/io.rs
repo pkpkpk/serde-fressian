@@ -92,6 +92,8 @@ pub trait IWriteBytes {
     fn write_u8(&mut self, byte: u8) -> Result<()>;
 
     fn write_bytes(&mut self, bytes: &[u8], off: usize, len: usize) -> Result<()>;
+
+    fn get_bytes_written(&self) -> u64;
 }
 
 impl IWriteBytes for ByteWriter<Vec<u8>> {
@@ -107,6 +109,14 @@ impl IWriteBytes for ByteWriter<Vec<u8>> {
         self.notify_bytes_written(len as u64);
         Ok(())
     }
+
+    fn get_bytes_written(&self) -> u64 {
+        self.bytes_written
+    }
+
+    // pub fn getChecksum(&self){
+    //     self.checksum.getChecksum()
+    // }
 }
 
 impl ByteWriter<Vec<u8>> {
@@ -148,14 +158,6 @@ impl ByteWriter<Vec<u8>> {
     pub fn notify_bytes_written(&mut self, count: u64) {
         self.bytes_written += count;
     }
-
-    pub fn get_bytes_written(&self) -> u64 {
-        self.bytes_written
-    }
-
-    // pub fn getChecksum(&self){
-    //     self.checksum.getChecksum()
-    // }
 }
 
 fn vec_write_byte(vec: &mut Vec<u8>, bytes_written: u64, byte: u8) {
