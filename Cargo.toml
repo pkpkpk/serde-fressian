@@ -19,6 +19,7 @@ serde_derive = "1.0.70"
 serde_bytes = "0.10.4"
 itertools = "0.7.3"
 byteorder = "1.2.3"
+ordered-float = {version= "0.5", features = ["serde"]}
 shrinkwraprs = "0.2.0"
 chrono = "0.4"
 uuid = "0.6"

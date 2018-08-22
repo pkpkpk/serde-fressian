@@ -9,7 +9,7 @@ pub mod INST {
     use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer, SerializeStruct};
 
-    #[derive(Shrinkwrap)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash)]
     pub struct INST (DateTime<Utc>);
 
     impl INST {
@@ -54,7 +54,7 @@ pub mod UUID {
 
     use uuid::Uuid;
 
-    #[derive(Shrinkwrap)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash)]
     pub struct UUID (Uuid);
 
     impl UUID {
@@ -96,7 +96,7 @@ pub mod URI {
     use serde::ser::{Serialize, Serializer, SerializeStruct};
     use url::{Url};
 
-    #[derive(Shrinkwrap)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash)]
     pub struct URI (Url);
 
     impl URI {
@@ -140,7 +140,7 @@ pub mod REGEX {
 
     use regex::Regex;
 
-    #[derive(Shrinkwrap)]
+    #[derive(Shrinkwrap, Clone)] //PartialOrd, Eq
     pub struct REGEX (Regex);
 
     impl REGEX {
@@ -149,6 +149,30 @@ pub mod REGEX {
         }
         pub fn into_inner(self) -> Regex {
             self.0
+        }
+    }
+
+    use std::cmp::{Eq,PartialOrd, Ordering};
+
+    impl PartialOrd for REGEX {
+        fn partial_cmp(&self, other: &REGEX) -> Option<Ordering> {
+             Some(self.as_str().cmp(other.as_str()))
+        }
+    }
+
+    impl PartialEq for REGEX {
+        fn eq(&self, other: &REGEX) -> bool {
+            self.as_str() == other.as_str()
+        }
+    }
+
+    impl Eq for REGEX {}
+
+    use std::hash::{Hash, Hasher};
+
+    impl Hash for REGEX {
+        fn hash<H: Hasher>(&self, state: &mut H) {
+            self.as_str().hash(state)
         }
     }
 
@@ -259,7 +283,6 @@ pub mod KEY {
         fn deserialize<D>(deserializer: D) -> Result<KEY, D::Error>
             where D: Deserializer<'de>,
         {
-            // is vector right way to do this?
             // [namespace, name]
             let mut v: Vec< Option<String>> = Vec::deserialize(deserializer)?;
 
@@ -353,14 +376,17 @@ pub mod typed_arrays {
         }
     }
 
+    use ordered_float::OrderedFloat;
 
-
-    #[derive(Shrinkwrap,Clone,Debug,PartialOrd,PartialEq)]
-    pub struct Float_Array (Vec<f32>);
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash)]
+    pub struct Float_Array (Vec<OrderedFloat<f32>>);
 
     impl Float_Array {
         pub fn from_vec(v: Vec<f32>) -> Self {
-            Float_Array(v)
+            let ret: Vec<OrderedFloat<f32>> = v.into_iter()
+                                               .map(|f: f32| OrderedFloat::from(f))
+                                               .collect();
+            Float_Array(ret)
         }
     }
 
@@ -368,7 +394,7 @@ pub mod typed_arrays {
         fn deserialize<D>(deserializer: D) -> Result<Float_Array, D::Error>
             where D: Deserializer<'de>,
         {
-            let v: Vec<f32> = Vec::deserialize(deserializer)?;
+            let v: Vec<OrderedFloat<f32>> = Vec::deserialize(deserializer)?;
 
             Ok(Float_Array(v))
         }
@@ -383,14 +409,15 @@ pub mod typed_arrays {
         }
     }
 
-
-
-    #[derive(Shrinkwrap,Clone,Debug,PartialOrd,PartialEq)]
-    pub struct Double_Array (Vec<f64>);
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
+    pub struct Double_Array (Vec<OrderedFloat<f64>>);
 
     impl Double_Array {
         pub fn from_vec(v: Vec<f64>) -> Self {
-            Double_Array(v)
+            let ret: Vec<OrderedFloat<f64>> = v.into_iter()
+                                               .map(|f: f64| OrderedFloat::from(f))
+                                               .collect();
+            Double_Array(ret)
         }
     }
 
@@ -398,7 +425,8 @@ pub mod typed_arrays {
         fn deserialize<D>(deserializer: D) -> Result<Double_Array, D::Error>
             where D: Deserializer<'de>,
         {
-            let v: Vec<f64> = Vec::deserialize(deserializer)?;
+            // hmmmm
+            let v: Vec<OrderedFloat<f64>> = Vec::deserialize(deserializer)?;
 
             Ok(Double_Array(v))
         }
