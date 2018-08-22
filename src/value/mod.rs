@@ -17,11 +17,16 @@ use SYM::{SYM};
 use KEY::{KEY};
 use typed_arrays::*;
 
+mod de;
+// mod from;
+// mod index;
+// mod partial_eq;
+// mod ser;
 
 /// Represents a Fressian value
 /// see serde_json + https://github.com/mozilla/mentat/blob/master/edn/src/types.rs
 // mentat also has fleshed out symbols, kws, linkedlist
-#[derive(Clone, PartialEq, PartialOrd, Eq, Hash)]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
 pub enum Value {
     NULL,
     BOOL(bool),

@@ -9,7 +9,7 @@ pub mod INST {
     use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer, SerializeStruct};
 
-    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
     pub struct INST (DateTime<Utc>);
 
     impl INST {
@@ -54,7 +54,7 @@ pub mod UUID {
 
     use uuid::Uuid;
 
-    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
     pub struct UUID (Uuid);
 
     impl UUID {
@@ -96,7 +96,7 @@ pub mod URI {
     use serde::ser::{Serialize, Serializer, SerializeStruct};
     use url::{Url};
 
-    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
     pub struct URI (Url);
 
     impl URI {
@@ -140,7 +140,7 @@ pub mod REGEX {
 
     use regex::Regex;
 
-    #[derive(Shrinkwrap, Clone)] //PartialOrd, Eq
+    #[derive(Shrinkwrap, Clone, Debug)] //PartialOrd, Eq
     pub struct REGEX (Regex);
 
     impl REGEX {
@@ -378,7 +378,7 @@ pub mod typed_arrays {
 
     use ordered_float::OrderedFloat;
 
-    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
     pub struct Float_Array (Vec<OrderedFloat<f32>>);
 
     impl Float_Array {
