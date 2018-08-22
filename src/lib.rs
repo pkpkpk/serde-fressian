@@ -14,6 +14,7 @@ extern crate serde;
 extern crate serde_bytes;
 
 extern crate byteorder;
+extern crate ordered_float;
 extern crate uuid;
 extern crate chrono;
 extern crate url;
@@ -22,6 +23,7 @@ extern crate regex;
 mod imp;
 pub mod ser;
 pub mod de;
+pub mod value;
 pub mod types;
 
 pub use types::{
