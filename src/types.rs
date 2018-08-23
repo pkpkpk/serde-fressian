@@ -9,7 +9,7 @@ pub mod INST {
     use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer, SerializeStruct};
 
-    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
     pub struct INST (DateTime<Utc>);
 
     impl INST {
@@ -54,7 +54,7 @@ pub mod UUID {
 
     use uuid::Uuid;
 
-    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
     pub struct UUID (Uuid);
 
     impl UUID {
@@ -96,7 +96,7 @@ pub mod URI {
     use serde::ser::{Serialize, Serializer, SerializeStruct};
     use url::{Url};
 
-    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
     pub struct URI (Url);
 
     impl URI {
@@ -154,9 +154,16 @@ pub mod REGEX {
 
     use std::cmp::{Eq,PartialOrd, Ordering};
 
+    impl Ord for REGEX {
+        fn cmp(&self, other: &REGEX) -> Ordering {
+            self.as_str().cmp(other.as_str())
+        }
+    }
+
     impl PartialOrd for REGEX {
         fn partial_cmp(&self, other: &REGEX) -> Option<Ordering> {
              Some(self.as_str().cmp(other.as_str()))
+             // Some(self.cmp(other))
         }
     }
 
@@ -378,7 +385,7 @@ pub mod typed_arrays {
 
     use ordered_float::OrderedFloat;
 
-    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
     pub struct Float_Array (Vec<OrderedFloat<f32>>);
 
     impl Float_Array {
@@ -409,7 +416,7 @@ pub mod typed_arrays {
         }
     }
 
-    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
     pub struct Double_Array (Vec<OrderedFloat<f64>>);
 
     impl Double_Array {

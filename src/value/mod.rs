@@ -1,5 +1,5 @@
 
-use std::collections::{BTreeSet, BTreeMap, LinkedList};
+use std::collections::{BTreeSet, BTreeMap};
 use std::cmp::{Ordering, Ord, PartialOrd};
 use std::fmt::{Display, Formatter};
 use std::f64;
@@ -26,7 +26,7 @@ mod de;
 /// Represents a Fressian value
 /// see serde_json + https://github.com/mozilla/mentat/blob/master/edn/src/types.rs
 // mentat also has fleshed out symbols, kws, linkedlist
-#[derive(Clone, PartialEq, PartialOrd, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
 pub enum Value {
     NULL,
     BOOL(bool),
