@@ -223,10 +223,9 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     serde::forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf
-        // option
-        unit unit_struct newtype_struct
-        seq tuple tuple_struct map struct enum identifier ignored_any
+        bytes byte_buf unit unit_struct seq map struct identifier ignored_any
+        enum newtype_struct
+        // option tuple tuple_struct
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
@@ -243,8 +242,33 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
         }
     }
+
+    fn deserialize_tuple_struct<V>(self, name: &'static str, len: usize, visitor: V) -> Result<V::Value>
+        where
+            V: Visitor<'de>,
+    {
+        match name {
+            "CODE" => {
+                //this will choke on cache codes, need to peek until next value code
+                visitor.visit_i8(self.peek_next_code()?)
+            }
+            _ => {
+                Err(Error::Syntax)
+            }
+        }
+    }
+
+    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value>
+        where V: Visitor<'de>,
+    {
+        //peeking the code increments count by 1
+        // so a simple CODE:DATA pair is length 2
+        // accomodating CODE:DATA:DATA (sym, kw,) etc needs longer
+        visitor.visit_seq(FixedListReader::new(self, 2))
+    }
 }
 
+////////////////////////////////////////////////////////////////////
 
 fn visit_list<'a, 'de, V>(de: &'a mut Deserializer<'de>, visitor: V) -> Result<V::Value>
     where
@@ -277,7 +301,7 @@ struct FixedListReader<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
     length: usize,
     items_read: usize,
-    nullable: bool
+    nullable: bool //remove
 }
 
 impl<'a, 'de> FixedListReader<'a, 'de> {

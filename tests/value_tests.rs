@@ -12,12 +12,10 @@ extern crate serde_fressian;
 extern crate ordered_float;
 
 use std::collections::{BTreeSet, BTreeMap};
-use serde::de::{Deserialize};
-use serde::Serialize;
+// use serde::de::{Deserialize};
+// use serde::Serialize;
 
-use serde_fressian::ser::{self, Serializer, FressianWriter};
-use serde_fressian::de::{self, Deserializer, from_vec};
-
+// use serde_fressian::ser::{self, Serializer, FressianWriter};
 
 use serde_fressian::INST::{INST};
 use serde_fressian::UUID::{UUID};
@@ -27,8 +25,10 @@ use serde_fressian::SYM::{SYM};
 use serde_fressian::KEY::{KEY};
 use serde_fressian::typed_arrays::*;
 
-use serde_fressian::value::{Value};
+use serde_fressian::value::{self, Value};
+use serde_fressian::de::{self};
 use ordered_float::OrderedFloat;
+
 
 #[test]
 fn value_de_test(){
@@ -37,8 +37,13 @@ fn value_de_test(){
     let control_bytes: Vec<u8> = vec![245];
     let b: bool = de::from_vec(&control_bytes).unwrap();
     assert_eq!(b,true);
+
+    let b: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(b, Value::BOOL(true));
+
     let val: Value = de::from_vec(&control_bytes).unwrap();
     assert_eq!(val, Value::BOOL(true));
+
 
     // (write 32.2)
     let control_bytes: Vec<u8> = vec![249,66,0,204,205];
@@ -62,6 +67,15 @@ fn value_de_test(){
     let val: Value = de::from_vec(&control_bytes).unwrap();
     assert_eq!(val, Value::STRING(control_value));
 
+    // (write :foo)
+    let control_bytes: Vec<u8> = vec![202,247,205,221,102,111,111];
+    let control_value = KEY::new(None,"foo".to_string());
+    let k: KEY = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(k, control_value);
+    // needs extra next_element call
+
+
+
     // (write ["what" "will" "grow" "crooked"])
     let control_bytes: Vec<u8> = vec![232,222,119,104,97,116,222,119,105,108,108,222,103,114,111,119,225,99,114,111,111,107,101,100];
     let control_value: Vec<String> = vec!["what".to_string(), "will".to_string(), "grow".to_string(), "crooked".to_string()];
@@ -74,17 +88,19 @@ fn value_de_test(){
     let val: Vec<Value> = de::from_vec(&control_bytes).unwrap();
     assert_eq!(val, vec![Value::STRING("what".to_string()), Value::STRING("will".to_string()), Value::STRING("grow".to_string()), Value::STRING("crooked".to_string())]);
 
-    // (write {:foo 42, "baz" [1 2 3]})
-    let control_bytes: Vec<u8> = vec![192,232,202,247,205,221,102,111,111,42,221,98,97,122,231,1,2,3];
-    let k0 = Value::KEY(KEY::new(None,"foo".to_string()));
-    let v0 = Value::INT(42);
-    let k1 = Value::STRING("baz".to_string());
-    let v1 = Value::LIST(vec![Value::INT(1), Value::INT(2), Value::INT(3) ]);
-    let mut control_map: BTreeMap<Value,Value> = BTreeMap::new();
-    control_map.insert(k0,v0);
-    control_map.insert(k1,v1);
-    let test_val: Value = de::from_vec(&control_bytes).unwrap();
-    // assert_eq!(test_val, Value::MAP(control_map))
-    // assert_eq!(val, Value::MAP(Value::STRING("what".to_string()), Value::STRING("will".to_string()), Value::STRING("grow".to_string()), Value::STRING("crooked".to_string())));
+    // // (write {:foo 42, "baz" [1 2 3]})
+    // let control_bytes: Vec<u8> = vec![192,232,202,247,205,221,102,111,111,42,221,98,97,122,231,1,2,3];
+    // let k0 = Value::KEY(KEY::new(None,"foo".to_string()));
+    // let v0 = Value::INT(42);
+    // let k1 = Value::STRING("baz".to_string());
+    // let v1 = Value::LIST(vec![Value::INT(1), Value::INT(2), Value::INT(3) ]);
+    // let mut control_map: BTreeMap<Value,Value> = BTreeMap::new();
+    // control_map.insert(k0,v0);
+    // control_map.insert(k1,v1);
+    // let test_val: Value = de::from_vec(&control_bytes).unwrap();
+    // // assert_eq!(test_val, Value::MAP(control_map))
+    // // assert_eq!(val, Value::MAP(Value::STRING("what".to_string()), Value::STRING("will".to_string()), Value::STRING("grow".to_string()), Value::STRING("crooked".to_string())));
+
+
 
 }

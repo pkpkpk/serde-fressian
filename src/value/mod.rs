@@ -17,7 +17,7 @@ use SYM::{SYM};
 use KEY::{KEY};
 use typed_arrays::*;
 
-mod de;
+pub mod de; //priv?
 // mod from;
 // mod index;
 // mod partial_eq;
