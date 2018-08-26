@@ -72,9 +72,16 @@ fn value_de_test(){
     let control_value = KEY::new(None,"foo".to_string());
     let k: KEY = de::from_vec(&control_bytes).unwrap();
     assert_eq!(k, control_value);
-    // needs extra next_element call
+    let val: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(val, Value::KEY(control_value));
 
-
+    // (write :foo/bar)
+    let control_bytes: Vec<u8> = vec![202,205,221,102,111,111,205,221,98,97,114];
+    let control_value = KEY::new(Some("foo".to_string()), "bar".to_string());
+    let k: KEY = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(k, control_value);
+    let val: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(val, Value::KEY(control_value));
 
     // (write ["what" "will" "grow" "crooked"])
     let control_bytes: Vec<u8> = vec![232,222,119,104,97,116,222,119,105,108,108,222,103,114,111,119,225,99,114,111,111,107,101,100];
@@ -88,19 +95,24 @@ fn value_de_test(){
     let val: Vec<Value> = de::from_vec(&control_bytes).unwrap();
     assert_eq!(val, vec![Value::STRING("what".to_string()), Value::STRING("will".to_string()), Value::STRING("grow".to_string()), Value::STRING("crooked".to_string())]);
 
-    // // (write {:foo 42, "baz" [1 2 3]})
-    // let control_bytes: Vec<u8> = vec![192,232,202,247,205,221,102,111,111,42,221,98,97,122,231,1,2,3];
-    // let k0 = Value::KEY(KEY::new(None,"foo".to_string()));
-    // let v0 = Value::INT(42);
-    // let k1 = Value::STRING("baz".to_string());
-    // let v1 = Value::LIST(vec![Value::INT(1), Value::INT(2), Value::INT(3) ]);
-    // let mut control_map: BTreeMap<Value,Value> = BTreeMap::new();
-    // control_map.insert(k0,v0);
-    // control_map.insert(k1,v1);
-    // let test_val: Value = de::from_vec(&control_bytes).unwrap();
-    // // assert_eq!(test_val, Value::MAP(control_map))
-    // // assert_eq!(val, Value::MAP(Value::STRING("what".to_string()), Value::STRING("will".to_string()), Value::STRING("grow".to_string()), Value::STRING("crooked".to_string())));
+     // (write  [-1 64 65 1024])
+    let control_bytes: Vec<u8> = vec![232,255,80,64,80,65,84,0];
+    let control_value: Vec<i64> = vec![-1,64,65,1024];
+    let v: Vec<i64> = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(v, control_value);
+    let val: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(val, Value::LIST(vec![Value::INT(-1), Value::INT(64), Value::INT(65), Value::INT(1024)]));
 
-
+    // (write {:foo 42, "baz" [1 2 3]})
+    let control_bytes: Vec<u8> = vec![192,232,202,247,205,221,102,111,111,42,221,98,97,122,231,1,2,3];
+    let k0 = Value::KEY(KEY::new(None,"foo".to_string()));
+    let v0 = Value::INT(42);
+    let k1 = Value::STRING("baz".to_string());
+    let v1 = Value::LIST(vec![Value::INT(1), Value::INT(2), Value::INT(3) ]);
+    let mut control_map: BTreeMap<Value,Value> = BTreeMap::new();
+    control_map.insert(k0,v0);
+    control_map.insert(k1,v1);
+    let test_val: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(test_val, Value::MAP(control_map));
 
 }

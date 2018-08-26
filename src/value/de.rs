@@ -11,33 +11,26 @@ use ordered_float::OrderedFloat;
 use imp::error::{Error};
 use imp::codes;
 use value::Value;
+use INST::{INST};
+use UUID::{UUID};
+use URI::{URI};
+use REGEX::{REGEX};
+use SYM::{SYM};
+use types::KEY::KEY;
+use typed_arrays::*;
 
-// #[derive(Shrinkwrap)]
-// struct CODE (i8);
 
-// impl<'de> Deserialize<'de> for CODE {
-//     fn deserialize<D>(deserializer: D) -> Result<CODE, D::Error>
-//         where D: serde::Deserializer<'de>
-//     {
-//         struct CodeVisitor;
-//
-//         impl<'de> Visitor<'de> for CodeVisitor {
-//             type Value = CODE;
-//
-//             #[inline]
-//             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-//                 formatter.write_str("code as i8")
-//             }
-//
-//             fn visit_i8<E>(self, value: i8) -> Result<CODE, E> {
-//                 Ok(CODE(value))
-//             }
-//         }
-//
-//         deserializer.deserialize_tuple_struct("CODE", 1, CodeVisitor)
-//     }
-// }
+struct KEY_SEED;
 
+impl<'de> de::DeserializeSeed<'de> for KEY_SEED {
+    type Value = KEY;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<KEY, D::Error>
+        where D: serde::Deserializer<'de>
+    {
+        KEY::deserialize(deserializer)
+    }
+}
 
 
 
@@ -82,24 +75,26 @@ impl<'de> Deserialize<'de> for Value {
             }
 
             #[inline]
-            fn visit_bool<E>(self, value: bool) -> Result<Value, E> {
-                Ok(Value::BOOL(value))
-            }
-
-            #[inline]
             fn visit_seq<V>(self, mut seq: V) -> Result<Value, V::Error>
             where
                 V: SeqAccess<'de>,
             {
-                // let (code, seq) = seq.next_element_seed(self)?;
                 let code: Option<i8> = seq.next_element_seed(self)?;
 
                 if let Some(code) = code {
-                    println!("CODE: {}", code as u8);
                     match code as u8 {
                         codes::NULL => Ok(Value::NULL),
                         codes::TRUE => Ok(Value::BOOL(true)),
                         codes::FALSE => Ok(Value::BOOL(false)),
+                        0xFF | 0x00..=0x7f | codes::INT => {
+                            let val: Option<i64> = seq.next_element()?;
+                            match val {
+                                Some(i) => {
+                                    Ok(Value::INT(i))
+                                },
+                                None => Err(de::Error::custom("expected INT"))
+                            }
+                        }
                         codes::FLOAT => {
                             let val: Option<f32> = seq.next_element()?;
                             match val {
@@ -139,6 +134,26 @@ impl<'de> Deserialize<'de> for Value {
                                 None => Err(de::Error::custom("missing LIST"))
                             }
                         }
+                        codes::MAP => {
+                            let val: Option<BTreeMap<Value,Value>> = seq.next_element()?;
+                            match val {
+                                Some(m) => {
+                                    Ok(Value::MAP(m))
+                                },
+                                None => Err(de::Error::custom("missing map"))
+                            }
+                        }
+                        codes::KEY => {
+                            let val: Option<KEY> = seq.next_element_seed(KEY_SEED)?;
+                            match val {
+                                Some(key) => {
+                                    Ok(Value::KEY(key))
+                                },
+                                None => Err(de::Error::custom("missing KEY"))
+                            }
+                        }
+
+
                         _ => Err(de::Error::custom("UnmatchedCode"))
                     }
                 } else {

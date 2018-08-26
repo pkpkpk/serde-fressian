@@ -249,7 +249,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     {
         match name {
             "CODE" => {
-                //this will choke on cache codes, need to peek until next value code
+                //this will choke on cache codes, need to peek until next value code ///////////////////////////////
                 visitor.visit_i8(self.peek_next_code()?)
             }
             _ => {
@@ -264,7 +264,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         //peeking the code increments count by 1
         // so a simple CODE:DATA pair is length 2
         // accomodating CODE:DATA:DATA (sym, kw,) etc needs longer
-        visitor.visit_seq(FixedListReader::new(self, 2))
+        // is there a reason to cap? reason not to?
+        visitor.visit_seq(FixedListReader::new(self, 3))
     }
 }
 
