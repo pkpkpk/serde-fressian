@@ -18,6 +18,7 @@ use std::collections::{HashMap, HashSet};
 use serde::de::{Deserialize};
 use serde::Serialize;
 
+
 use serde_fressian::ser::{self, Serializer, FressianWriter};
 use serde_fressian::de::{self, Deserializer, from_vec};
 
@@ -25,19 +26,18 @@ use serde_fressian::de::{self, Deserializer, from_vec};
 #[test]
 fn inst_test(){
     // use chrono::{ DateTime, Utc,};
+    // use chrono::offset::{TimeZone, Offset};
+    // use chrono::naive::{NaiveDateTime};
     use serde_fressian::INST::{INST};
-    // #inst "2018-08-13T02:20:05.875-00:00"
-    let value: Vec<u8> = vec![200,123,101,49,21,83,115];
-    let control_str = "2018-08-13T02:20:05";
-    let dt: INST = de::from_vec(&value).unwrap();
-    // assert_eq!(dt.to_string(), "2018-08-13T02:20:05.875-00:00");
-    // couldnt figure out fff in "yyyy-mm-ddThh:mm:ss.fff+hh:mm"
-    assert_eq!(dt.format("%Y-%m-%dT%H:%M:%S").to_string(), control_str);
-    // rt
-    let dt: INST = INST::from_millis(1534126805875);
-    let written_bytes = ser::to_vec(&dt).unwrap();
-    let i: INST = de::from_vec(&written_bytes).unwrap();
-    assert_eq!(i.format("%Y-%m-%dT%H:%M:%S").to_string(), "2018-08-13T02:20:05");
+
+    // // #inst "2018-08-13T02:20:05.875-00:00"
+    // let value: Vec<u8> = vec![200,123,101,49,21,83,115];
+
+    //eq #inst "2018-08-27T00:13:56.181-00:00"
+    // // let f_rfc: DateTime<chrono::FixedOffset> = DateTime::parse_from_rfc3339("2018-08-27T00:13:56.181-00:00").unwrap();
+
+    let i: INST = INST::from_millis(1535328836181);
+    assert_eq!(i.to_millis(), 1535328836181)
 }
 
 #[test]

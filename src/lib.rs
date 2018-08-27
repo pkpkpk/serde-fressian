@@ -16,7 +16,7 @@ extern crate serde_bytes;
 extern crate byteorder;
 extern crate ordered_float;
 extern crate uuid;
-extern crate chrono;
+// extern crate chrono;
 extern crate url;
 extern crate regex;
 

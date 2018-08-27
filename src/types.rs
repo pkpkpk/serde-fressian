@@ -2,27 +2,52 @@
 
 pub mod INST {
 
-    use chrono::{ DateTime, Utc,};
-    use chrono::offset::{TimeZone, Offset};
-    use chrono::naive::{NaiveDateTime};
+    // was using chrono Datetime<Utc> because thats what mentat used
+    // but it appears that Utc is a lossy representation.
+    // clojure insts are ~rfc3339; see https://clojure.github.io/clojure/clojure.instant-api.html
+    // Chrono has from from_rfc string methods but need to write
+    // roundtrip lossless Datetime<Fixed> <--> millisec
+
+    // probably should be hid under a feature flag any way.
+    //  - most users will not use
+    //  - need bindings for richer functionality
+
+    // use chrono::{ DateTime, Utc,};
+    // use chrono::offset::{TimeZone, Offset};
+    // use chrono::naive::{NaiveDateTime};
+
+    // #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
+    // pub struct INST (DateTime<Utc>);
+    //
+    // impl INST {
+    //     // from mentat/edn
+    //     pub fn from_millis(ms: i64) -> Self {
+    //         INST(Utc.timestamp(ms / 1_000, ((ms % 1_000).abs() as u32) * 1_000))
+    //     }
+    //     pub fn to_millis(&self) -> i64 {
+    //         let major: i64 = self.timestamp() * 1_000;
+    //         let minor: i64 = self.timestamp_subsec_millis() as i64;
+    //         major + minor
+    //     }
+    //     pub fn into_inner(self) -> DateTime<Utc> {
+    //         self.0
+    //     }
+    // }
 
     use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer, SerializeStruct};
 
     #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
-    pub struct INST (DateTime<Utc>);
+    pub struct INST (i64);
 
     impl INST {
-        // from mentat/edn
         pub fn from_millis(ms: i64) -> Self {
-            INST(Utc.timestamp(ms / 1_000, ((ms % 1_000).abs() as u32) * 1_000))
+            INST(ms)
         }
         pub fn to_millis(&self) -> i64 {
-            let major: i64 = self.timestamp() * 1_000;
-            let minor: i64 = self.timestamp_subsec_millis() as i64;
-            major + minor
+            self.0
         }
-        pub fn into_inner(self) -> DateTime<Utc> {
+        pub fn into_inner(self) -> i64 {
             self.0
         }
     }
@@ -32,7 +57,7 @@ pub mod INST {
             where D: Deserializer<'de>,
         {
             let ms: i64 = i64::deserialize(deserializer)?;
-            Ok(INST::from_millis(ms) )
+            Ok(INST::from_millis(ms))
         }
     }
 
@@ -64,18 +89,20 @@ pub mod UUID {
         pub fn into_inner(self) -> Uuid {
             self.0
         }
+
+        #[inline]
+        pub fn from_bytes(bytes: &[u8]) -> Result<Self, uuid::ParseError> {
+            Uuid::from_bytes(bytes).map(UUID::from_Uuid)
+        }
     }
 
     impl<'de> Deserialize<'de> for UUID {
         fn deserialize<D>(deserializer: D) -> Result<UUID, D::Error>
             where D: Deserializer<'de>,
         {
-            let bytes: ByteBuf = ByteBuf::deserialize(deserializer)?;
+            let bb: ByteBuf = ByteBuf::deserialize(deserializer)?;
 
-            match Uuid::from_bytes(bytes.as_ref()) {
-                Ok(uuid) => Ok(UUID(uuid)),
-                Err(e) => Err(Error::custom(e))
-            }
+            UUID::from_bytes(bb.as_ref()).map_err(Error::custom)
         }
     }
 
@@ -106,6 +133,11 @@ pub mod URI {
         pub fn into_inner(self) -> Url {
             self.0
         }
+
+        #[inline]
+        pub fn from_str(s: &str) -> Result<Self, url::ParseError> {
+            Url::parse(s).map(URI::from_Url)
+        }
     }
 
     impl<'de> Deserialize<'de> for URI {
@@ -114,10 +146,7 @@ pub mod URI {
         {
             let s: String = String::deserialize(deserializer)?;
 
-            match Url::parse(s.as_ref()) {
-                Ok(u) => Ok(URI(u)),
-                Err(e) => Err(Error::custom(e))
-            }
+            URI::from_str(s.as_ref()).map_err(Error::custom)
         }
     }
 
@@ -150,6 +179,11 @@ pub mod REGEX {
         pub fn into_inner(self) -> Regex {
             self.0
         }
+
+        #[inline]
+        pub fn from_str(s: &str) -> Result<Self, regex::Error> {
+            Regex::new(s).map(REGEX::from_Regex)
+        }
     }
 
     use std::cmp::{Eq,PartialOrd, Ordering};
@@ -163,7 +197,6 @@ pub mod REGEX {
     impl PartialOrd for REGEX {
         fn partial_cmp(&self, other: &REGEX) -> Option<Ordering> {
              Some(self.as_str().cmp(other.as_str()))
-             // Some(self.cmp(other))
         }
     }
 
@@ -189,10 +222,7 @@ pub mod REGEX {
         {
             let s: String = String::deserialize(deserializer)?;
 
-            match Regex::new(s.as_ref()) {
-                Ok(re) => Ok(REGEX::from_Regex(re)),
-                Err(e) => Err(Error::custom(e))
-            }
+            REGEX::from_str(s.as_ref()).map_err(Error::custom)
         }
     }
 
@@ -300,7 +330,7 @@ pub mod KEY {
                 (Some(namespace_opt),Some(Some(name_string))) => {
                     Ok(KEY::new(namespace_opt, name_string))
                 }
-                _ => Err(Error::custom("bad symbol"))
+                _ => Err(Error::custom("bad keyword"))
             }
         }
     }
@@ -478,3 +508,4 @@ pub mod typed_arrays {
     }
 }
 
+// into_inner methods
