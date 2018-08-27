@@ -11,7 +11,7 @@ use serde_fressian::ser::{Serializer};
 pub extern "C" fn hello() -> *const u8 {
     let data = vec![["hello", "from", "wasm!"], ["isn't", "this", "exciting?!"]];
 
-    let mut fressian_writer = Serializer::new();
+    let mut fressian_writer = Serializer::from_vec(Vec::<u8>::new());
     data.serialize(&mut fressian_writer).unwrap();
     fressian_writer.write_footer();
     fressian_writer.get_ref().as_ptr()

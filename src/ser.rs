@@ -1,7 +1,5 @@
 use serde::ser::{self, Serialize};
 
-use std::cmp;
-
 use imp::RawOutput::*;
 use imp::codes;
 use imp::ranges;
@@ -70,95 +68,11 @@ where
     Ok(serializer.to_vec())
 }
 
-pub trait FressianWriter {
-
-    fn write_code(&mut self, code: u8 ) -> Result<()>;
-
-    fn write_count(&mut self, count: usize) -> Result<()>;
-
-    fn write_int(&mut self, i: i64 ) -> Result<()>;
-
-    fn write_null(&mut self) -> Result<()>;
-
-    fn write_boolean(&mut self, b: bool) -> Result<()>;
-
-    fn write_float(&mut self, f: f32) -> Result<()>;
-
-    fn write_double(&mut self, f: f64) -> Result<()>;
-
-    fn write_bytes(&mut self, bytes: &[u8], offset: usize, length: usize) -> Result<()>;
-
-    fn write_string(&mut self, s: &str) -> Result<()>;
-
-    fn write_footer(&mut self) -> Result<()>;
-
-    fn begin_open_list(&mut self) -> Result<()>;
-
-    fn begin_closed_list(&mut self) -> Result<()>;
-
-    fn end_list(&mut self) -> Result<()>;
-
-    fn write_list_header(&mut self, length: usize) -> Result<()>;
-
-    fn write_list<I>(&mut self, iter: I) -> Result<()>
-    where
-        I: IntoIterator,
-        <I as IntoIterator>::Item: Serialize;
-
-    fn write_map<K,V,I>(&mut self, iter:I) -> Result<()>
-    where K: Serialize,
-          V: Serialize,
-          I: IntoIterator<Item = (K,V)>;
-
-    fn write_set<I, V>(&mut self, iter: I) -> Result<()>
-    where V: Serialize + std::cmp::Eq + std::hash::Hash,
-          I: IntoIterator<Item = V>;
-}
-
-
-impl<W> FressianWriter for Serializer<W>
+impl<W> Serializer<W>
 where
     W: IWriteBytes,
 {
-
-    fn write_code(&mut self, code: u8 ) -> Result<()>
-    {
-        self.rawOut.write_code(&mut self.writer, code)
-    }
-
-    fn write_count(&mut self, count: usize) -> Result<()> {
-        self.rawOut.write_int(&mut self.writer, count as i64)
-    }
-
-    fn write_int(&mut self, i: i64 ) -> Result<()>{
-        self.rawOut.write_int(&mut self.writer,i)
-    }
-
-    fn write_null(&mut self) -> Result<()> {
-        self.rawOut.write_null(&mut self.writer)
-    }
-
-    fn write_boolean(&mut self, b: bool) -> Result<()>{
-        self.rawOut.write_boolean(&mut self.writer, b)
-    }
-
-    fn write_float(&mut self, f: f32) -> Result<()>{
-        self.rawOut.write_float(&mut self.writer,f)
-    }
-
-    fn write_double(&mut self, f: f64) -> Result<()>{
-        self.rawOut.write_double(&mut self.writer,f)
-    }
-
-    fn write_bytes(&mut self, bytes: &[u8], offset: usize, length: usize) -> Result<()>{
-        self.rawOut.write_bytes(&mut self.writer,bytes,offset,length)
-    }
-
-    fn write_string(&mut self, s: &str) -> Result<()> {
-        self.rawOut.write_string(&mut self.writer,s)
-    }
-
-    fn write_footer(&mut self) -> Result<()> {
+    pub fn write_footer(&mut self) -> Result<()> {
         let length = self.writer.get_bytes_written();
         // self.clear_caches()
         self.rawOut.write_raw_i32(&mut self.writer,codes::FOOTER_MAGIC as i32)?;
@@ -168,19 +82,56 @@ where
         // self.reset();
     }
 
-    fn begin_open_list(&mut self) -> Result<()> {
+    pub fn write_code(&mut self, code: u8 ) -> Result<()>
+    {
+        self.rawOut.write_code(&mut self.writer, code)
+    }
+
+    pub fn write_count(&mut self, count: usize) -> Result<()> {
+        self.rawOut.write_int(&mut self.writer, count as i64)
+    }
+
+    pub fn write_int(&mut self, i: i64 ) -> Result<()>{
+        self.rawOut.write_int(&mut self.writer,i)
+    }
+
+    pub fn write_null(&mut self) -> Result<()> {
+        self.rawOut.write_null(&mut self.writer)
+    }
+
+    pub fn write_boolean(&mut self, b: bool) -> Result<()>{
+        self.rawOut.write_boolean(&mut self.writer, b)
+    }
+
+    pub fn write_float(&mut self, f: f32) -> Result<()>{
+        self.rawOut.write_float(&mut self.writer,f)
+    }
+
+    pub fn write_double(&mut self, f: f64) -> Result<()>{
+        self.rawOut.write_double(&mut self.writer,f)
+    }
+
+    pub fn write_bytes(&mut self, bytes: &[u8], offset: usize, length: usize) -> Result<()>{
+        self.rawOut.write_bytes(&mut self.writer,bytes,offset,length)
+    }
+
+    pub fn write_string(&mut self, s: &str) -> Result<()> {
+        self.rawOut.write_string(&mut self.writer,s)
+    }
+
+    pub fn begin_open_list(&mut self) -> Result<()> {
         self.write_code(codes::BEGIN_OPEN_LIST)
     }
 
-    fn begin_closed_list(&mut self) -> Result<()> {
+    pub fn begin_closed_list(&mut self) -> Result<()> {
         self.write_code(codes::BEGIN_CLOSED_LIST)
     }
 
-    fn end_list(&mut self) -> Result<()> {
+    pub fn end_list(&mut self) -> Result<()> {
         self.write_code(codes::END_COLLECTION)
     }
 
-    fn write_list_header(&mut self, length: usize) -> Result<()>{
+    pub fn write_list_header(&mut self, length: usize) -> Result<()>{
         if (length as u8) < ranges::LIST_PACKED_LENGTH_END {
             self.write_code(codes::LIST_PACKED_LENGTH_START.wrapping_add( length as u8))
         } else {
@@ -189,7 +140,7 @@ where
         }
     }
 
-    fn write_list<I>(&mut self, iter: I) -> Result<()>
+    pub fn write_list<I>(&mut self, iter: I) -> Result<()>
     where
         I: IntoIterator,
         <I as IntoIterator>::Item: Serialize,
@@ -215,7 +166,7 @@ where
         }
     }
 
-    fn write_map<K,V,I>(&mut self, iter:I) -> Result<()>
+    pub fn write_map<K,V,I>(&mut self, iter:I) -> Result<()>
     where K: Serialize,
           V: Serialize,
           I: IntoIterator<Item = (K,V)>,
@@ -246,7 +197,7 @@ where
         }
     }
 
-    fn write_set<I, V>(&mut self, iter: I) -> Result<()>
+    pub fn write_set<I, V>(&mut self, iter: I) -> Result<()>
     where V: Serialize + std::cmp::Eq + std::hash::Hash,
           I: IntoIterator<Item = V>,
     {

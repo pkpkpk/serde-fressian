@@ -18,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 use serde::de::{Deserialize};
 use serde::Serialize;
 
-use serde_fressian::ser::{self, Serializer, FressianWriter};
+use serde_fressian::ser::{self, Serializer};
 use serde_fressian::de::{self, Deserializer, from_vec};
 
 
