@@ -42,11 +42,11 @@ impl_seed!(INST_SEED: INST);
 impl_seed!(REGEX_SEED: REGEX);
 impl_seed!(UUID_SEED: UUID);
 impl_seed!(URI_SEED: URI);
-impl_seed!(INT_ARRAY: Int_Array);
-impl_seed!(LONG_ARRAY: Long_Array);
-impl_seed!(FLOAT_ARRAY: Float_Array);
-impl_seed!(DOUBLE_ARRAY: Double_Array);
-impl_seed!(BOOLEAN_ARRAY: Boolean_Array);
+impl_seed!(INT_ARRAY_SEED: Int_Array);
+impl_seed!(LONG_ARRAY_SEED: Long_Array);
+impl_seed!(FLOAT_ARRAY_SEED: Float_Array);
+impl_seed!(DOUBLE_ARRAY_SEED: Double_Array);
+impl_seed!(BOOLEAN_ARRAY_SEED: Boolean_Array);
 
 
 impl<'de> Deserialize<'de> for Value {
@@ -212,8 +212,51 @@ impl<'de> Deserialize<'de> for Value {
                                 None => Err(de::Error::custom("missing URI"))
                             }
                         }
-
-
+                        codes::INT_ARRAY => {
+                            let val: Option<Int_Array> = seq.next_element_seed(INT_ARRAY_SEED)?;
+                            match val {
+                                Some(v) => {
+                                    Ok(Value::from(v))
+                                },
+                                None => Err(de::Error::custom("missing INT_ARRAY"))
+                            }
+                        }
+                        codes::LONG_ARRAY => {
+                            let val: Option<Long_Array> = seq.next_element_seed(LONG_ARRAY_SEED)?;
+                            match val {
+                                Some(v) => {
+                                    Ok(Value::from(v))
+                                },
+                                None => Err(de::Error::custom("missing LONG_ARRAY"))
+                            }
+                        }
+                        codes::FLOAT_ARRAY => {
+                            let val: Option<Float_Array> = seq.next_element_seed(FLOAT_ARRAY_SEED)?;
+                            match val {
+                                Some(v) => {
+                                    Ok(Value::from(v))
+                                },
+                                None => Err(de::Error::custom("missing FLOAT_ARRAY"))
+                            }
+                        }
+                        codes::DOUBLE_ARRAY => {
+                            let val: Option<Double_Array> = seq.next_element_seed(DOUBLE_ARRAY_SEED)?;
+                            match val {
+                                Some(v) => {
+                                    Ok(Value::from(v))
+                                },
+                                None => Err(de::Error::custom("missing DOUBLE_ARRAY"))
+                            }
+                        }
+                        codes::BOOLEAN_ARRAY => {
+                            let val: Option<Boolean_Array> = seq.next_element_seed(BOOLEAN_ARRAY_SEED)?;
+                            match val {
+                                Some(v) => {
+                                    Ok(Value::from(v))
+                                },
+                                None => Err(de::Error::custom("missing BOOLEAN_ARRAY"))
+                            }
+                        }
                         _ => Err(de::Error::custom("UnmatchedCode"))
                     }
                 } else {
@@ -225,8 +268,3 @@ impl<'de> Deserialize<'de> for Value {
     }
 }
 
-// impl_seed!(INT_ARRAY: Int_Array);
-// impl_seed!(LONG_ARRAY: Long_Array);
-// impl_seed!(FLOAT_ARRAY: Float_Array);
-// impl_seed!(DOUBLE_ARRAY: Double_Array);
-// impl_seed!(BOOLEAN_ARRAY: Boolean_Array);

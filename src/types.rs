@@ -365,6 +365,13 @@ pub mod typed_arrays {
         }
     }
 
+    impl From<Vec<i32>> for Int_Array {
+        #[inline]
+        fn from(val: Vec<i32>) -> Int_Array {
+            Int_Array::from_vec(val)
+        }
+    }
+
     impl<'de> Deserialize<'de> for Int_Array {
         fn deserialize<D>(deserializer: D) -> Result<Int_Array, D::Error>
             where D: Deserializer<'de>,
@@ -391,6 +398,13 @@ pub mod typed_arrays {
     impl Long_Array {
         pub fn from_vec(v: Vec<i64>) -> Self {
             Long_Array(v)
+        }
+    }
+
+    impl From<Vec<i64>> for Long_Array {
+        #[inline]
+        fn from(val: Vec<i64>) -> Long_Array {
+            Long_Array::from_vec(val)
         }
     }
 
@@ -427,6 +441,13 @@ pub mod typed_arrays {
         }
     }
 
+    impl From<Vec<f32>> for Float_Array {
+        #[inline]
+        fn from(val: Vec<f32>) -> Float_Array {
+            Float_Array::from_vec(val)
+        }
+    }
+
     impl<'de> Deserialize<'de> for Float_Array {
         fn deserialize<D>(deserializer: D) -> Result<Float_Array, D::Error>
             where D: Deserializer<'de>,
@@ -458,6 +479,13 @@ pub mod typed_arrays {
         }
     }
 
+    impl From<Vec<f64>> for Double_Array {
+        #[inline]
+        fn from(val: Vec<f64>) -> Double_Array {
+            Double_Array::from_vec(val)
+        }
+    }
+
     impl<'de> Deserialize<'de> for Double_Array {
         fn deserialize<D>(deserializer: D) -> Result<Double_Array, D::Error>
             where D: Deserializer<'de>,
@@ -485,6 +513,13 @@ pub mod typed_arrays {
     impl Boolean_Array {
         pub fn from_vec(v: Vec<bool>) -> Self {
             Boolean_Array(v)
+        }
+    }
+
+    impl From<Vec<bool>> for Boolean_Array {
+        #[inline]
+        fn from(val: Vec<bool>) -> Boolean_Array {
+            Boolean_Array::from_vec(val)
         }
     }
 
