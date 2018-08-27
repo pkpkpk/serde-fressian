@@ -115,4 +115,23 @@ fn value_de_test(){
     let test_val: Value = de::from_vec(&control_bytes).unwrap();
     assert_eq!(test_val, Value::MAP(control_map));
 
+    // (write ['foo 'bar/baz])
+    let control_bytes: Vec<u8> = vec![230,201,247,205,221,102,111,111,201,205,221,98,97,114,205,221,98,97,122];
+    let control_value: Vec<SYM> = vec![SYM::new(None,"foo".to_string()), SYM::new(Some("bar".to_string()),"baz".to_string()) ];
+    let v: Vec<SYM> = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(v, control_value);
+    let val: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(val, Value::LIST(vec![Value::SYM(SYM::new(None,"foo".to_string())), Value::SYM(SYM::new(Some("bar".to_string()),"baz".to_string()))]));
+
+    // (write [ #inst "2018-08-27T00:13:56.181-00:00",  #"\n", #uuid "9d046b06-f24e-4301-a266-8b80783e0f00", (goog.Uri. "https://www.youtube.com/watch?v=Z1nFB-R-_gI") ])
+    let control_bytes: Vec<u8> = vec![232,200,123,101,120,186,218,85,196,220,92,110,195,217,16,157,4,107,6,242,78,67,1,162,102,139,128,120,62,15,0,197,227,43,104,116,116,112,115,58,47,47,119,119,119,46,121,111,117,116,117,98,101,46,99,111,109,47,119,97,116,99,104,63,118,61,90,49,110,70,66,45,82,45,95,103,73];
+    let date: INST = INST::from_millis(1535328836181);
+    let re: REGEX = REGEX::from_str(r"\n").unwrap();
+    let u: UUID = UUID::from_bytes(&[157,4,107,6,  242,78,67,1,  162,102,139,128,  120,62,15,0]).unwrap();
+    let uri: URI = URI::from_str("https://www.youtube.com/watch?v=Z1nFB-R-_gI").unwrap();
+
+    let control_value: Vec<Value> = vec![ Value::from(date), Value::from(re), Value::from(u), Value::from(uri)];
+    let test_value: Vec<Value> = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(test_value, control_value);
+
 }

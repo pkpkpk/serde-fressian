@@ -59,5 +59,34 @@ pub enum Value {
     BOOLEAN_ARRAY(Boolean_Array)
 }
 
+macro_rules! impl_into_value {
+    ($variant:ident : $T:ty) => {
+        impl From<$T> for Value {
+            #[inline]
+            fn from(val: $T) -> Value {
+                Value::$variant(val.into())
+            }
+        }
+    }
+}
 
-
+impl_into_value!(STRING: String);
+impl_into_value!(INT: i64);
+impl_into_value!(INT: i32);
+impl_into_value!(INT: i8);
+impl_into_value!(INT: u8);
+impl_into_value!(INT: u32);
+impl_into_value!(DOUBLE: f64);
+impl_into_value!(FLOAT: f32);
+impl_into_value!(BOOL: bool);
+impl_into_value!(KEY: KEY);
+impl_into_value!(SYM: SYM);
+impl_into_value!(INST: INST);
+impl_into_value!(REGEX: REGEX);
+impl_into_value!(UUID: UUID);
+impl_into_value!(URI: URI);
+impl_into_value!(INT_ARRAY: Int_Array);
+impl_into_value!(LONG_ARRAY: Long_Array);
+impl_into_value!(FLOAT_ARRAY: Float_Array);
+impl_into_value!(DOUBLE_ARRAY: Double_Array);
+impl_into_value!(BOOLEAN_ARRAY: Boolean_Array);

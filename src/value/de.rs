@@ -19,19 +19,34 @@ use SYM::{SYM};
 use types::KEY::KEY;
 use typed_arrays::*;
 
+macro_rules! impl_seed {
+    ($variant:ident : $T:ident) => {
 
-struct KEY_SEED;
+        struct $variant;
 
-impl<'de> de::DeserializeSeed<'de> for KEY_SEED {
-    type Value = KEY;
+        impl<'de> de::DeserializeSeed<'de> for $variant {
+            type Value = $T;
 
-    fn deserialize<D>(self, deserializer: D) -> Result<KEY, D::Error>
-        where D: serde::Deserializer<'de>
-    {
-        KEY::deserialize(deserializer)
+            fn deserialize<D>(self, deserializer: D) -> Result<$T, D::Error>
+                where D: serde::Deserializer<'de>
+            {
+                $T::deserialize(deserializer)
+            }
+        }
     }
 }
 
+impl_seed!(SYM_SEED: SYM);
+impl_seed!(KEY_SEED: KEY);
+impl_seed!(INST_SEED: INST);
+impl_seed!(REGEX_SEED: REGEX);
+impl_seed!(UUID_SEED: UUID);
+impl_seed!(URI_SEED: URI);
+impl_seed!(INT_ARRAY: Int_Array);
+impl_seed!(LONG_ARRAY: Long_Array);
+impl_seed!(FLOAT_ARRAY: Float_Array);
+impl_seed!(DOUBLE_ARRAY: Double_Array);
+impl_seed!(BOOLEAN_ARRAY: Boolean_Array);
 
 
 impl<'de> Deserialize<'de> for Value {
@@ -152,6 +167,51 @@ impl<'de> Deserialize<'de> for Value {
                                 None => Err(de::Error::custom("missing KEY"))
                             }
                         }
+                        codes::SYM => {
+                            let val: Option<SYM> = seq.next_element_seed(SYM_SEED)?;
+                            match val {
+                                Some(sym) => {
+                                    Ok(Value::SYM(sym))
+                                },
+                                None => Err(de::Error::custom("missing SYM"))
+                            }
+                        }
+                        codes::INST => {
+                            let val: Option<INST> = seq.next_element_seed(INST_SEED)?;
+                            match val {
+                                Some(inst) => {
+                                    Ok(Value::INST(inst))
+                                },
+                                None => Err(de::Error::custom("missing INST"))
+                            }
+                        }
+                        codes::REGEX => {
+                            let val: Option<REGEX> = seq.next_element_seed(REGEX_SEED)?;
+                            match val {
+                                Some(regex) => {
+                                    Ok(Value::REGEX(regex))
+                                },
+                                None => Err(de::Error::custom("missing REGEX"))
+                            }
+                        }
+                        codes::UUID => {
+                            let val: Option<UUID> = seq.next_element_seed(UUID_SEED)?;
+                            match val {
+                                Some(u) => {
+                                    Ok(Value::UUID(u))
+                                },
+                                None => Err(de::Error::custom("missing UUID"))
+                            }
+                        }
+                        codes::URI => {
+                            let val: Option<URI> = seq.next_element_seed(URI_SEED)?;
+                            match val {
+                                Some(u) => {
+                                    Ok(Value::URI(u))
+                                },
+                                None => Err(de::Error::custom("missing URI"))
+                            }
+                        }
 
 
                         _ => Err(de::Error::custom("UnmatchedCode"))
@@ -165,3 +225,8 @@ impl<'de> Deserialize<'de> for Value {
     }
 }
 
+// impl_seed!(INT_ARRAY: Int_Array);
+// impl_seed!(LONG_ARRAY: Long_Array);
+// impl_seed!(FLOAT_ARRAY: Float_Array);
+// impl_seed!(DOUBLE_ARRAY: Double_Array);
+// impl_seed!(BOOLEAN_ARRAY: Boolean_Array);
