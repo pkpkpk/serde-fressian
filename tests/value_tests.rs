@@ -14,6 +14,7 @@ extern crate ordered_float;
 use std::collections::{BTreeSet, BTreeMap};
 
 use ordered_float::OrderedFloat;
+use serde_bytes::ByteBuf;
 
 use serde_fressian::INST::{INST};
 use serde_fressian::UUID::{UUID};
@@ -25,7 +26,28 @@ use serde_fressian::typed_arrays::*;
 
 use serde_fressian::value::{self, Value};
 use serde_fressian::de::{self};
-use serde_fressian::ser::{self}; //Serializer
+use serde_fressian::ser::{self};
+
+#[test]
+fn bytes_rt(){
+    // (write (u8-array [0 1 2 126 127 128 253 254 255]))
+    let control_bytes: Vec<u8> = vec![217,9,0,1,2,126,127,128,253,254,255];
+    let control_slice: &[u8] = &[0,1,2,126,127,128,253,254,255];
+    let control_bb = ByteBuf::from(control_slice);
+
+    // strongly typed
+    let test_bb: ByteBuf = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_bb, test_bb);
+    let test_bytes: Vec<u8> = ser::to_vec(&test_bb).unwrap();
+    assert_eq!(control_bytes, test_bytes);
+
+    // VALUE
+    let control_value = Value::BYTES(control_bb);
+    let test_value: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(test_value, control_value);
+    let test_bytes: Vec<u8> = ser::to_vec(&test_value).unwrap();
+    assert_eq!(control_bytes, test_bytes);
+}
 
 #[test]
 fn bool_value_rt(){

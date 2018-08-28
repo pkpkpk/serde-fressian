@@ -7,6 +7,7 @@ use serde::de::{
 };
 
 use ordered_float::OrderedFloat;
+use serde_bytes::ByteBuf;
 
 use imp::error::{Error};
 use imp::codes;
@@ -36,6 +37,7 @@ macro_rules! impl_seed {
     }
 }
 
+impl_seed!(BYTES_SEED: ByteBuf);
 impl_seed!(SYM_SEED: SYM);
 impl_seed!(KEY_SEED: KEY);
 impl_seed!(INST_SEED: INST);
@@ -136,6 +138,15 @@ impl<'de> Deserialize<'de> for Value {
                                     Ok(Value::STRING(s))
                                 },
                                 None => Err(de::Error::custom("missing double"))
+                            }
+                        }
+                        codes::BYTES => {
+                            let val: Option<ByteBuf> = seq.next_element_seed(BYTES_SEED)?;
+                            match val {
+                                Some(bb) => {
+                                    Ok(Value::BYTES(bb))
+                                },
+                                None => Err(de::Error::custom("missing BYTES"))
                             }
                         }
                         codes::LIST_PACKED_LENGTH_START..=235

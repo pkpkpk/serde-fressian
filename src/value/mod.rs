@@ -5,7 +5,7 @@ use std::fmt::{Display, Formatter};
 use std::f64;
 
 use ordered_float::OrderedFloat;
-
+use serde_bytes::ByteBuf;
 
 // this stuff all needs wrappers so we can have serialize/deserialize
 // TODO explore remote attr, specialization so we can dump these
@@ -36,28 +36,31 @@ pub enum Value {
     // CHAR(char)
     STRING(String),
     // UTF8(&'a str),
-    // BYTES(&[u8]),
+    BYTES(ByteBuf), // ideally should be &'a [u8]
     LIST(Vec<Value>),
     // gonna let the good people at mozilla make hard decisions for us:
     //   " We're using BTree{Set, Map} rather than Hash{Set, Map} because the BTree variants
     //    implement Hash. The Hash variants don't in order to preserve O(n) hashing
     //    time, which is hard given recursive data structures.
     //    See https://internals.rust-lang.org/t/implementing-hash-for-hashset-hashmap/3817/1 "
-    SET(BTreeSet<Value>),
     MAP(BTreeMap<Value, Value>),
+    SET(BTreeSet<Value>), // <----- needs attn
     SYM(SYM),
     KEY(KEY),
     INST(INST),
     UUID(UUID),
     REGEX(REGEX),
     URI(URI),
-    // BIGINT()
-    // BIGDEC
     INT_ARRAY(Int_Array),
     LONG_ARRAY(Long_Array),
     FLOAT_ARRAY(Float_Array),
     DOUBLE_ARRAY(Double_Array),
     BOOLEAN_ARRAY(Boolean_Array)
+    // BIGINT()
+    // BIGDEC
+    // OBJECT_ARRAY
+    // RECORD
+    // TAGGED_OBJECT
 }
 
 macro_rules! impl_into_value {
@@ -93,3 +96,4 @@ impl_into_value!(LONG_ARRAY: Long_Array);
 impl_into_value!(FLOAT_ARRAY: Float_Array);
 impl_into_value!(DOUBLE_ARRAY: Double_Array);
 impl_into_value!(BOOLEAN_ARRAY: Boolean_Array);
+// ...colls...

@@ -41,18 +41,13 @@ impl Serialize for Value {
             Value::FLOAT_ARRAY(ref v) => v.serialize(serializer),
             Value::DOUBLE_ARRAY(ref v) => v.serialize(serializer),
             Value::BOOLEAN_ARRAY(ref v) => v.serialize(serializer),
+            Value::BYTES(ref v) => serializer.serialize_bytes(v.as_ref()),
+
+            // CHAR(char)
+            // BIGINT()
+            // BIGDEC
+            // UTF8(&'a str),
         }
     }
 }
-
-// // CHAR(char)
-// // BIGINT()
-// // BIGDEC
-// // UTF8(&'a str),
-// LIST(Vec<Value>),
-// INT_ARRAY(Int_Array),
-// LONG_ARRAY(Long_Array),
-// FLOAT_ARRAY(Float_Array),
-// DOUBLE_ARRAY(Double_Array),
-// BOOLEAN_ARRAY(Boolean_Array)
 
