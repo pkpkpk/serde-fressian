@@ -16,6 +16,7 @@ use REGEX::{REGEX};
 use SYM::{SYM};
 use KEY::{KEY};
 use typed_arrays::*;
+use SET::{SET};
 
 mod de;
 mod ser;
@@ -44,7 +45,7 @@ pub enum Value {
     //    time, which is hard given recursive data structures.
     //    See https://internals.rust-lang.org/t/implementing-hash-for-hashset-hashmap/3817/1 "
     MAP(BTreeMap<Value, Value>),
-    SET(BTreeSet<Value>), // <----- needs attn
+    SET(SET<Value>),
     SYM(SYM),
     KEY(KEY),
     INST(INST),
@@ -96,4 +97,19 @@ impl_into_value!(LONG_ARRAY: Long_Array);
 impl_into_value!(FLOAT_ARRAY: Float_Array);
 impl_into_value!(DOUBLE_ARRAY: Double_Array);
 impl_into_value!(BOOLEAN_ARRAY: Boolean_Array);
-// ...colls...
+
+
+impl From<SET<Value>> for Value
+{
+    #[inline]
+    fn from(val: SET<Value>) -> Value {
+        Value::SET(val)
+    }
+}
+
+impl From<BTreeSet<Value>> for Value {
+    #[inline]
+    fn from(val: BTreeSet<Value>) -> Value {
+        Value::SET(SET::from(val))
+    }
+}

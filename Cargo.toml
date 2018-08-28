@@ -21,12 +21,14 @@ itertools = "0.7.3"
 byteorder = "1.2.3"
 ordered-float = {version= "0.5", features = ["serde"]}
 shrinkwraprs = "0.2.0"
-chrono = "0.4"
+# chrono = "0.4"
 uuid = "0.6"
 regex = "1"
 url = "1.7.1"
 
 [dev-dependencies]
-quickcheck = "0.5.0"
+# quickcheck = "0.5.0"
+maplit = "1.0.1"
+
 [profile.release]
 debug = true

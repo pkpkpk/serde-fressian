@@ -269,6 +269,10 @@ where
         T: ?Sized + Serialize,
     {
         match _name {
+            "SET" => {
+                self.write_code(codes::SET)?;
+                value.serialize(self)
+            }
             "INST" => {
                 self.write_code(codes::INST)?;
                 value.serialize(self)

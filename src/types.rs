@@ -490,7 +490,6 @@ pub mod typed_arrays {
         fn deserialize<D>(deserializer: D) -> Result<Double_Array, D::Error>
             where D: Deserializer<'de>,
         {
-            // hmmmm
             let v: Vec<OrderedFloat<f64>> = Vec::deserialize(deserializer)?;
 
             Ok(Double_Array(v))
@@ -539,6 +538,56 @@ pub mod typed_arrays {
             S: Serializer,
         {
             serializer.serialize_newtype_struct("BOOLEAN_ARRAY", &self.0)
+        }
+    }
+}
+
+pub mod SET {
+
+    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::ser::{Serialize, Serializer};
+    use std::collections::{BTreeSet};
+    use std::cmp::{Ord};
+
+    #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
+    pub struct SET<T>(BTreeSet<T>);
+
+    impl<T> SET<T> {
+        pub fn into_inner(self) -> BTreeSet<T> {
+            self.0
+        }
+    }
+
+    impl<T> From<BTreeSet<T>> for SET<T>
+        where T: Serialize + Ord,
+    {
+        #[inline]
+        fn from(val: BTreeSet<T>) -> SET<T> {
+            SET(val)
+        }
+    }
+
+    impl<T> Serialize for SET<T>
+        where T: Serialize + Ord,
+    {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+
+        {
+            serializer.serialize_newtype_struct("SET", &self.0)
+        }
+    }
+
+    impl<'de,T> Deserialize<'de> for SET<T>
+        where T: Deserialize<'de> + Ord + Serialize,
+    {
+        fn deserialize<D>(deserializer: D) -> Result<SET<T>, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let v: BTreeSet<T> = BTreeSet::deserialize(deserializer)?;
+
+            Ok(SET::from(v))
         }
     }
 }

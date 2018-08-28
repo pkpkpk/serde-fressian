@@ -19,6 +19,7 @@ use REGEX::{REGEX};
 use SYM::{SYM};
 use types::KEY::KEY;
 use typed_arrays::*;
+use SET::{SET};
 
 macro_rules! impl_seed {
     ($variant:ident : $T:ident) => {
@@ -158,6 +159,15 @@ impl<'de> Deserialize<'de> for Value {
                                     Ok(Value::LIST(v))
                                 },
                                 None => Err(de::Error::custom("missing LIST"))
+                            }
+                        }
+                        codes::SET => {
+                            let val: Option<SET<Value>> = seq.next_element()?;
+                            match val {
+                                Some(v) => {
+                                    Ok(Value::SET(v))
+                                },
+                                None => Err(de::Error::custom("missing map"))
                             }
                         }
                         codes::MAP => {

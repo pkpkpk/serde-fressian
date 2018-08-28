@@ -29,7 +29,7 @@ impl Serialize for Value {
             Value::STRING(ref s) => serializer.serialize_str(s),
             Value::LIST(ref v) => v.serialize(serializer),
             Value::MAP(ref m) => m.serialize(serializer),
-            Value::SET(ref s) => s.serialize(serializer),/////////////
+            Value::SET(ref s) => s.serialize(serializer),
             Value::KEY(ref v) => v.serialize(serializer),
             Value::SYM(ref v) => v.serialize(serializer),
             Value::INST(ref v) => v.serialize(serializer),

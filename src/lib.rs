@@ -33,7 +33,8 @@ pub use types::{
     REGEX,
     SYM,
     KEY,
-    typed_arrays
+    typed_arrays,
+    SET
 };
 
 
