@@ -17,11 +17,11 @@ use SYM::{SYM};
 use KEY::{KEY};
 use typed_arrays::*;
 
-pub mod de; //priv?
+mod de;
+mod ser;
 // mod from;
 // mod index;
 // mod partial_eq;
-// mod ser;
 
 /// Represents a Fressian value
 /// see serde_json + https://github.com/mozilla/mentat/blob/master/edn/src/types.rs
@@ -36,6 +36,7 @@ pub enum Value {
     // CHAR(char)
     STRING(String),
     // UTF8(&'a str),
+    // BYTES(&[u8]),
     LIST(Vec<Value>),
     // gonna let the good people at mozilla make hard decisions for us:
     //   " We're using BTree{Set, Map} rather than Hash{Set, Map} because the BTree variants
@@ -71,10 +72,12 @@ macro_rules! impl_into_value {
 }
 
 impl_into_value!(STRING: String);
-impl_into_value!(INT: i64);
-impl_into_value!(INT: i32);
 impl_into_value!(INT: i8);
+impl_into_value!(INT: i16);
+impl_into_value!(INT: i32);
+impl_into_value!(INT: i64);
 impl_into_value!(INT: u8);
+impl_into_value!(INT: u16);
 impl_into_value!(INT: u32);
 impl_into_value!(DOUBLE: f64);
 impl_into_value!(FLOAT: f32);
