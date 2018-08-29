@@ -7,10 +7,14 @@ use imp::io::{ByteReader};
 use imp::error::{Error, Result};
 use imp::RawInput::{RawInput};
 use imp::codes;
+use value::{self, Value};
+use std::collections::{HashMap};
 
 pub struct Deserializer<'de>{
     rdr: ByteReader<'de>,
-    rawIn: RawInput
+    rawIn: RawInput,
+    cache_next: bool,
+    priority_cache: Vec<Value>
 }
 
 impl<'de> Deserializer<'de>
@@ -18,7 +22,9 @@ impl<'de> Deserializer<'de>
     pub fn from_bytes(bytes: &'de [u8]) -> Self {
         Deserializer {
             rdr: ByteReader::new(bytes),
-            rawIn: RawInput
+            rawIn: RawInput,
+            cache_next: false,
+            priority_cache: Vec::<Value>::new()
         }
     }
 
@@ -33,6 +39,14 @@ impl<'de> Deserializer<'de>
 
     fn peek_next_code(&mut self) -> Result<i8> {
         RawInput.peek_next_code(&mut self.rdr)
+    }
+
+    fn add_priority_cache(&mut self, value: Value) {
+        self.priority_cache.push(value)
+    }
+
+    fn get_priority_cache(&self, index: usize) -> Option<&Value> {
+        self.priority_cache.get(index)
     }
 
     // reset
@@ -108,12 +122,26 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
             codes::STRING_PACKED_LENGTH_START..=225 => {
                 let length = code as u8 - codes::STRING_PACKED_LENGTH_START;
-                visitor.visit_string(self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?)
+                let string: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
+
+                if self.cache_next {
+                    self.cache_next = false;
+                    self.add_priority_cache(Value::STRING(string.clone()))
+                }
+
+                visitor.visit_string(string)
             }
 
             codes::STRING => {
                 let length = self.rawIn.read_count(&mut self.rdr)?;
-                visitor.visit_string(self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?)
+                let string: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
+
+                if self.cache_next {
+                    self.cache_next = false;
+                    self.add_priority_cache(Value::STRING(string.clone()))
+                }
+
+                visitor.visit_string(string)
             }
 
             // codes::STRING_CHUNK => {///////////////////////////////////////////////////////////////
@@ -200,20 +228,33 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
             codes::KEY => {
                 // expect  PUT_PRIORITY_CACHE | STRING | PUT_PRIORITY_CACHE | STRING
-                visitor.visit_seq(FixedListReader::new_nullable(self, 2))
+                visitor.visit_seq(FixedListReader::new(self, 2)) //////////////
             }
-
-            codes::PUT_PRIORITY_CACHE => {
-                // cache here?
-                self.deserialize_any(visitor)
-            }
-
 
             codes::INT_ARRAY | codes::LONG_ARRAY | codes::FLOAT_ARRAY
             | codes::DOUBLE_ARRAY | codes::BOOLEAN_ARRAY | codes::OBJECT_ARRAY
             => {
                 let length = self.rawIn.read_count(&mut self.rdr)?;
                 visitor.visit_seq(FixedListReader::new(self, length as usize))
+            }
+
+            codes::PUT_PRIORITY_CACHE => {
+                self.cache_next = true;
+                self.deserialize_any(visitor)
+            }
+
+            codes::PRIORITY_CACHE_PACKED_START..=159 => {
+                let index = code as u8 - codes::PRIORITY_CACHE_PACKED_START;
+                if let Some(ref val) = self.get_priority_cache(index as usize) {
+                    match val {
+                        Value::STRING(s) => {
+                            visitor.visit_string(s.clone())
+                        }
+                        _ => Err(Error::Message("unsupported cached Value type".to_string())) //need value formatting
+                    }
+                } else {
+                    Err(Error::Message("missing cached object".to_string()))
+                }
             }
 
 

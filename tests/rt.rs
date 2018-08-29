@@ -77,8 +77,10 @@ fn set_rt(){
     assert_eq!(control_value, derived_set_value);
 }
 
+
 #[test]
 fn homogenous_map_rt(){
+    // simpl valid rust maps, all keys are same T, all vals same T
 
     // (write {"a" 0 "b" 1})
     let control_bytes: Vec<u8> = vec![192,232,219,97,0,219,98,1];
@@ -87,7 +89,6 @@ fn homogenous_map_rt(){
             "a".to_string() => 0,
             "b".to_string() => 1
         };
-
     // strongly typed
     let test_map: BTreeMap<String, i64> = de::from_vec(&control_bytes).unwrap();
     assert_eq!(control_map, test_map);
@@ -95,7 +96,6 @@ fn homogenous_map_rt(){
     // maps write with nondet ordering so cannot compare bytes directly
     let derived_map: BTreeMap<String, i64> = de::from_vec(&test_bytes).unwrap();
     assert_eq!(control_map, derived_map);
-
     // VALUE
     let control_map_value: Value = Value::from(control_map);
     let test_map_value: Value = de::from_vec(&control_bytes).unwrap();
@@ -104,6 +104,63 @@ fn homogenous_map_rt(){
     let derived_map_value: Value = de::from_vec(&test_bytes).unwrap();
     assert_eq!(control_map_value, derived_map_value);
 
+    // (write {:a/b []})
+    let control_bytes: Vec<u8> = vec![192,230,
+                                      //KEY
+                                      202,
+                                          //PUT_PRIORITY_CACHE
+                                          205,
+                                             //STRING_PACKED 1
+                                             219,
+                                               97, // 'a'
+                                          // PUT_PRIORITY_CACHE
+                                          205,
+                                             //STRING_PACKED 1
+                                             219,
+                                               98,// 'b'
+                                      //LIST_PACKED_LENGTH_START 0
+                                      228];
+    let k = KEY::namespaced("a".to_string(),"b".to_string());
+    let control_map: BTreeMap<KEY, Vec<i64>> = btreemap!{ k => vec![]};
+
+    // strongly typed
+    let test_map: BTreeMap<KEY, Vec<i64>> = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_map, test_map);
+    let test_bytes: Vec<u8> = ser::to_vec(&test_map).unwrap();
+    let derived_map: BTreeMap<KEY, Vec<i64>> = de::from_vec(&test_bytes).unwrap();
+    assert_eq!(control_map, derived_map);
+    // Value
+    let control_map_value: Value = Value::from(control_map);
+    let test_map_value: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_map_value, test_map_value);
+    let test_bytes: Vec<u8> = ser::to_vec(&test_map_value).unwrap();
+    let derived_map_value: Value = de::from_vec(&test_bytes).unwrap();
+    assert_eq!(control_map_value, derived_map_value);
+
+
+    // (write {:a [1 2 3] :b/b []})
+    let control_bytes: Vec<u8> = vec![192,232,202,247,205,219,97,231,1,2,3,202,205,219,98,129,228];
+    let a = KEY::simple("a".to_string());
+    let b = KEY::namespaced("b".to_string(),"b".to_string());
+    let control_map: BTreeMap<KEY, Vec<i64>> =
+        btreemap!{
+            a => vec![1, 2, 3],
+            b => vec![]
+        };
+
+    // strongly typed
+    let test_map: BTreeMap<KEY, Vec<i64>> = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_map, test_map);
+    let test_bytes: Vec<u8> = ser::to_vec(&test_map).unwrap();
+    let derived_map: BTreeMap<KEY, Vec<i64>>= de::from_vec(&test_bytes).unwrap();
+    assert_eq!(control_map, derived_map);
+    // Value
+    let control_map_value: Value = Value::from(control_map);
+    let test_map_value: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_map_value, test_map_value);
+    let test_bytes: Vec<u8> = ser::to_vec(&test_map_value).unwrap();
+    let derived_map_value: Value = de::from_vec(&test_bytes).unwrap();
+    assert_eq!(control_map_value, derived_map_value);
 }
 
 // need serde-with + type extraction

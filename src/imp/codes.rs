@@ -1,8 +1,8 @@
 
-pub const PRIORITY_CACHE_PACKED_START: u8 = 0x80;
-pub const PRIORITY_CACHE_PACKED_END: u8 = 0xA0;
+pub const PRIORITY_CACHE_PACKED_START: u8 = 0x80; //128
+pub const PRIORITY_CACHE_PACKED_END: u8 = 0xA0; // 160
 pub const STRUCT_CACHE_PACKED_START: u8 = 0xA0;
-pub const STRUCT_CACHE_PACKED_END: u8 = 0xB0;
+pub const STRUCT_CACHE_PACKED_END: u8 = 0xB0; //176
 pub const LONG_ARRAY: u8 = 0xB0;
 pub const DOUBLE_ARRAY: u8 = 0xB1;
 pub const BOOLEAN_ARRAY: u8 = 0xB2;
@@ -70,5 +70,5 @@ pub const INT_PACKED_6_START: u8 = 0x78; //120
 pub const INT_PACKED_6_ZERO: u8 = 0x7A; //122
 pub const INT_PACKED_6_END: u8 = 0x7C; //124
 pub const INT_PACKED_7_START: u8 = 0x7C;
-pub const INT_PACKED_7_ZERO: u8 = 0x7E;
+pub const INT_PACKED_7_ZERO: u8 = 0x7E; //126
 pub const INT_PACKED_7_END: u8 = 0x80;
