@@ -102,6 +102,12 @@ impl_into_value!(DOUBLE_ARRAY: Double_Array);
 impl_into_value!(BOOLEAN_ARRAY: Boolean_Array);
 
 
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    fn from(val: Vec<T>) -> Value {
+        Value::LIST(val.into_iter().map(Into::into).collect())
+    }
+}
+
 impl From<SET<Value>> for Value
 {
     #[inline]
@@ -122,8 +128,7 @@ impl<K,V> From<BTreeMap<K,V>> for Value
           V: Into<Value>,
 {
     fn from(val: BTreeMap<K,V>) -> Value {
-        let map: BTreeMap<Value,Value> = val.into_iter().map(|(k,v)|(k.into(), v.into())).collect();
-        Value::MAP(map)
+        Value::MAP(val.into_iter().map(|(k,v)|(k.into(), v.into())).collect())
     }
 }
 
