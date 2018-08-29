@@ -4,8 +4,10 @@ use std::cmp::{Ordering, Ord, PartialOrd};
 use std::fmt::{Display, Formatter};
 use std::f64;
 
-use ordered_float::OrderedFloat;
+use serde::ser::Serialize;
 use serde_bytes::ByteBuf;
+
+use ordered_float::OrderedFloat;
 
 // this stuff all needs wrappers so we can have serialize/deserialize
 // TODO explore remote attr, specialization so we can dump these
@@ -23,6 +25,7 @@ mod ser;
 // mod from;
 // mod index;
 // mod partial_eq;
+// use self::ser::Serializer;
 
 /// Represents a Fressian value
 /// see serde_json + https://github.com/mozilla/mentat/blob/master/edn/src/types.rs
@@ -107,9 +110,10 @@ impl From<SET<Value>> for Value
     }
 }
 
-impl From<BTreeSet<Value>> for Value {
-    #[inline]
-    fn from(val: BTreeSet<Value>) -> Value {
-        Value::SET(SET::from(val))
+impl<T: Into<Value>> From<BTreeSet<T>> for Value {
+    fn from(val: BTreeSet<T>) -> Value {
+        let set: BTreeSet<Value> = val.into_iter().map(Into::into).collect();
+        Value::SET(SET::from(set))
     }
 }
+

@@ -67,18 +67,44 @@ fn set_rt(){
     assert_eq!(*s, derived_set);
 
     // VALUE
-    let value_set: BTreeSet<Value> = btreeset!{Value::from(0),
-                                               Value::from(1),
-                                               Value::from(2),
-                                               Value::from(3)};
-
-    let control_value: Value = Value::from(value_set);
+    let control_set: BTreeSet<i64> = btreeset!{0,1,2,3};
+    let control_value: Value = Value::from(control_set);
     let test_value: Value = de::from_vec(&test_bytes).unwrap();
     assert_eq!(control_value, test_value);
     let test_bytes: Vec<u8> = ser::to_vec(&test_value).unwrap();
     // sets write with nondet ordering so cannot compare bytes directly
     let derived_set_value: Value = de::from_vec(&test_bytes).unwrap();
     assert_eq!(control_value, derived_set_value);
+}
+
+#[test]
+fn homogenous_map_rt(){
+
+    // (write {"a" 0 "b" 1})
+    let control_bytes: Vec<u8> = vec![192,232,219,97,0,219,98,1];
+    let control_map: BTreeMap<String, i64> =
+        btreemap!{
+            "a".to_string() => 0,
+            "b".to_string() => 1
+        };
+
+    // strongly typed
+    let test_map: BTreeMap<String, i64> = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_map, test_map);
+    let test_bytes: Vec<u8> = ser::to_vec(&test_map).unwrap();
+    // maps write with nondet ordering so cannot compare bytes directly
+    let derived_map: BTreeMap<String, i64> = de::from_vec(&test_bytes).unwrap();
+    assert_eq!(control_map, derived_map);
+
+    // VALUE
+    // let base_map: BTreeMap<String, i64> =
+    //     btreemap!{
+    //         Value::STRING("a".to_string()) => Value::INT(0),
+    //         Value::STRING("b".to_string()) => Value::INT(1)
+    //     };
+    // let control_map_value: Value = Value::MAP(base_map);
+    // let test_map_value: Value = de::from_vec(&control_bytes).unwrap();
+
 }
 
 // need serde-with + type extraction
