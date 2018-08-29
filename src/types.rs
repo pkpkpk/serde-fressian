@@ -260,6 +260,12 @@ pub mod SYM {
             //     name: name
             // }
         }
+        pub fn simple(name: String) -> Self {
+            SYM(None, name)
+        }
+        pub fn namespaced(namespace: String, name: String) -> Self {
+            SYM(Some(namespace), name)
+        }
     }
 
     impl<'de> Deserialize<'de> for SYM {
@@ -313,6 +319,12 @@ pub mod KEY {
     impl KEY {
         pub fn new(namespace: Option<String>, name: String) -> Self {
             KEY(namespace, name)
+        }
+        pub fn simple(name: String) -> Self {
+            KEY(None, name)
+        }
+        pub fn namespaced(namespace: String, name: String) -> Self {
+            KEY(Some(namespace), name)
         }
     }
 
