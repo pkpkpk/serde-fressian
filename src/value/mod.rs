@@ -1,8 +1,8 @@
 
 use std::collections::{BTreeSet, BTreeMap};
 use std::cmp::{Ordering, Ord, PartialOrd};
-use std::fmt::{Display, Formatter};
-use std::f64;
+// use std::fmt::{Display, Formatter};
+// use std::f64;
 
 use serde::ser::Serialize;
 use serde_bytes::ByteBuf;
@@ -114,6 +114,16 @@ impl<T: Into<Value>> From<BTreeSet<T>> for Value {
     fn from(val: BTreeSet<T>) -> Value {
         let set: BTreeSet<Value> = val.into_iter().map(Into::into).collect();
         Value::SET(SET::from(set))
+    }
+}
+
+impl<K,V> From<BTreeMap<K,V>> for Value
+    where K: Into<Value>,
+          V: Into<Value>,
+{
+    fn from(val: BTreeMap<K,V>) -> Value {
+        let map: BTreeMap<Value,Value> = val.into_iter().map(|(k,v)|(k.into(), v.into())).collect();
+        Value::MAP(map)
     }
 }
 

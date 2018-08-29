@@ -97,13 +97,12 @@ fn homogenous_map_rt(){
     assert_eq!(control_map, derived_map);
 
     // VALUE
-    // let base_map: BTreeMap<String, i64> =
-    //     btreemap!{
-    //         Value::STRING("a".to_string()) => Value::INT(0),
-    //         Value::STRING("b".to_string()) => Value::INT(1)
-    //     };
-    // let control_map_value: Value = Value::MAP(base_map);
-    // let test_map_value: Value = de::from_vec(&control_bytes).unwrap();
+    let control_map_value: Value = Value::from(control_map);
+    let test_map_value: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_map_value, test_map_value);
+    let test_bytes: Vec<u8> = ser::to_vec(&test_map_value).unwrap();
+    let derived_map_value: Value = de::from_vec(&test_bytes).unwrap();
+    assert_eq!(control_map_value, derived_map_value);
 
 }
 
