@@ -5,10 +5,12 @@ use imp::codes;
 use imp::ranges;
 use imp::error::{Error, Result};
 use imp::io::{ByteWriter, IWriteBytes};
+use value::{self, Value};
+use imp::cache::{Cache};
 
-pub struct Serializer<W>{
+pub struct Serializer<W> {
     writer: W,
-    rawOut: RawOutput
+    cache: Cache
 }
 
 impl<W> Serializer<W>
@@ -18,17 +20,14 @@ where
     pub fn new(writer: W) -> Self {
         Serializer {
             writer: writer,
-            rawOut: RawOutput
+            cache: Cache::new()
         }
     }
 }
 
 impl Serializer<ByteWriter<Vec<u8>>> {
     pub fn from_vec(v: Vec<u8>) -> Self {
-        Serializer {
-            writer: ByteWriter::from_vec(v),
-            rawOut: RawOutput
-        }
+        Serializer::new(ByteWriter::from_vec(v))
     }
 
     pub fn reset(&mut self) {
@@ -72,51 +71,52 @@ impl<W> Serializer<W>
 where
     W: IWriteBytes,
 {
+
     pub fn write_footer(&mut self) -> Result<()> {
         let length = self.writer.get_bytes_written();
         // self.clear_caches()
-        self.rawOut.write_raw_i32(&mut self.writer,codes::FOOTER_MAGIC as i32)?;
-        self.rawOut.write_raw_i32(&mut self.writer,length as i32)?; //?
+        RawOutput.write_raw_i32(&mut self.writer,codes::FOOTER_MAGIC as i32)?;
+        RawOutput.write_raw_i32(&mut self.writer,length as i32)?; //?
         let checksum = 0; //rawOut.getChecksum().getValue()
-        self.rawOut.write_raw_i32(&mut self.writer, checksum)
+        RawOutput.write_raw_i32(&mut self.writer, checksum)
         // self.reset();
     }
 
     pub fn write_code(&mut self, code: u8 ) -> Result<()>
     {
-        self.rawOut.write_code(&mut self.writer, code)
+        RawOutput.write_code(&mut self.writer, code)
     }
 
     pub fn write_count(&mut self, count: usize) -> Result<()> {
-        self.rawOut.write_int(&mut self.writer, count as i64)
+        RawOutput.write_int(&mut self.writer, count as i64)
     }
 
     pub fn write_int(&mut self, i: i64 ) -> Result<()>{
-        self.rawOut.write_int(&mut self.writer,i)
+        RawOutput.write_int(&mut self.writer, i)
     }
 
     pub fn write_null(&mut self) -> Result<()> {
-        self.rawOut.write_null(&mut self.writer)
+        RawOutput.write_null(&mut self.writer)
     }
 
     pub fn write_boolean(&mut self, b: bool) -> Result<()>{
-        self.rawOut.write_boolean(&mut self.writer, b)
+        RawOutput.write_boolean(&mut self.writer, b)
     }
 
     pub fn write_float(&mut self, f: f32) -> Result<()>{
-        self.rawOut.write_float(&mut self.writer,f)
+        RawOutput.write_float(&mut self.writer,f)
     }
 
     pub fn write_double(&mut self, f: f64) -> Result<()>{
-        self.rawOut.write_double(&mut self.writer,f)
+        RawOutput.write_double(&mut self.writer,f)
     }
 
     pub fn write_bytes(&mut self, bytes: &[u8], offset: usize, length: usize) -> Result<()>{
-        self.rawOut.write_bytes(&mut self.writer,bytes,offset,length)
+        RawOutput.write_bytes(&mut self.writer,bytes,offset,length)
     }
 
     pub fn write_string(&mut self, s: &str) -> Result<()> {
-        self.rawOut.write_string(&mut self.writer,s)
+        RawOutput.write_string(&mut self.writer,s)
     }
 
     pub fn begin_open_list(&mut self) -> Result<()> {
@@ -785,28 +785,24 @@ where
     type SerializeStructVariant = ser::Impossible<(), Error>;
 
     #[inline]
-    fn serialize_bool(self, _value: bool) -> Result<()> {
-        _value.serialize(self.ser)
-    }
+    fn serialize_bool(self, value: bool) -> Result<()> { value.serialize(self.ser) }
 
     #[inline]
-    fn serialize_none(self) -> Result<()> {
-         // serialized as null
-         self.ser.serialize_none()
-    }
+    fn serialize_none(self) -> Result<()> { self.ser.serialize_none() }
+
+    #[inline]
+    fn serialize_unit(self) -> Result<()> { self.ser.serialize_unit() }
 
     #[inline]
     fn serialize_some<S>(self, value: &S) -> Result<()>
-    where S: ?Sized + Serialize, {
-         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-         value.serialize(self.ser)
+        where S: ?Sized + Serialize,
+    {
+         // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+         value.serialize(self)
     }
 
-    #[inline]
-    fn serialize_unit(self) -> Result<()> {
-         // serialized as null
-         self.ser.serialize_unit()
-    }
+
+
 
     #[inline]
     fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
@@ -833,9 +829,29 @@ where
     #[inline]
     fn serialize_str(self, _value: &str) -> Result<()> {
         if _value.len() != 0 {
-            self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+            // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+            // _value.serialize(self.ser)
+            let val = Value::from(_value.to_string());
+            let cached_code: Option<u8> = self.ser.cache.get(&val);
+
+            match cached_code {
+                Some(code) => {
+                    if code < ranges::PRIORITY_CACHE_PACKED_END {
+                        self.ser.write_code( code + codes::PRIORITY_CACHE_PACKED_START )
+                    } else {
+                        self.ser.write_code(codes::GET_PRIORITY_CACHE)?;
+                        self.ser.write_int(code as i64)
+                    }
+                }
+                None => {
+                    let _ = self.ser.cache.put(val);
+                    self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+                    _value.serialize(self.ser)
+                }
+            }
+        } else {
+            _value.serialize(self.ser)
         }
-        _value.serialize(self.ser)
     }
 
     /////////////////////////////////////////////////////////////

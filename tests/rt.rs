@@ -163,4 +163,17 @@ fn homogenous_map_rt(){
     assert_eq!(control_map_value, derived_map_value);
 }
 
+#[test]
+fn cache_hits(){
+    // (write [:foo :foo :foo :foo])
+    let control_bytes: Vec<u8> = vec![232,202,247,205,221,102,111,111,202,247,128,202,247,128,202,247,128];
+    let k = KEY::simple("foo".to_string());
+    let control_vec: Vec<KEY> = vec![k.clone(),k.clone(),k.clone(),k];
+    // strongly typed
+    let test_vec: Vec<KEY> = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_vec, test_vec);
+    let test_bytes: Vec<u8> = ser::to_vec(&test_vec).unwrap();
+    assert_eq!(&control_bytes, &test_bytes);
+}
+
 // need serde-with + type extraction
