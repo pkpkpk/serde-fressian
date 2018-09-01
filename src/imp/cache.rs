@@ -42,6 +42,7 @@ impl Cache {
     }
 
     pub fn reset(&mut self) {
+        self.index = 0;
         self.store.clear()
     }
 }

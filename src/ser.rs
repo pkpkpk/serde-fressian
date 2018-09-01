@@ -10,7 +10,8 @@ use imp::cache::{Cache};
 
 pub struct Serializer<W> {
     writer: W,
-    cache: Cache
+    cache: Cache,
+    cache_next: bool,
 }
 
 impl<W> Serializer<W>
@@ -20,7 +21,8 @@ where
     pub fn new(writer: W) -> Self {
         Serializer {
             writer: writer,
-            cache: Cache::new()
+            cache: Cache::new(),
+            cache_next: false,
         }
     }
 }
@@ -40,6 +42,13 @@ impl Serializer<ByteWriter<Vec<u8>>> {
 
     pub fn to_vec(&mut self) -> Vec<u8> {
         self.writer.to_vec()
+    }
+
+    pub fn caching_serialize<S>(&mut self, val: S) -> Result<()>
+        where S: Serialize,
+    {
+        self.cache_next = true;
+        val.serialize(self)
     }
 }
 
@@ -239,8 +248,12 @@ where
 
     fn serialize_u32(self, v: u32) -> Result<()> { self.write_int(i64::from(v)) }
 
-    fn serialize_u64(self, v: u64) -> Result<()> {/////////////////////////////////////////////////
-        Ok(())
+    fn serialize_u64(self, v: u64) -> Result<()> {
+        if (std::i64::MAX as u64) < v {
+            Err(Error::Message("u64 too large for i64".to_string()))
+        } else {
+            self.write_int(v as i64)
+        }
     }
 
     fn serialize_f32(self, v: f32) -> Result<()> { self.write_float(v) }
@@ -763,9 +776,36 @@ where
 }
 /////////////////////////////////////////////////////////////////////////////
 
-// writes PUT_PRIORITY_CACHE and then defers serialization back to original deserializer
+
 struct CachingSerializer<'a, W: 'a>{
     ser: &'a mut Serializer<W>
+}
+
+impl<'a,W> CachingSerializer<'a,W>
+where
+    W: IWriteBytes,
+{
+    fn cache_primitive<V>(self, prim: V, Val: Value) -> Result<()>
+        where V: Serialize,
+    {
+        // let Val: Value = Value::from(val.clone());
+        let cached_code: Option<u8> = self.ser.cache.get(&Val);
+        match cached_code {
+            Some(code) => {
+                if code < ranges::PRIORITY_CACHE_PACKED_END {
+                    self.ser.write_code( code + codes::PRIORITY_CACHE_PACKED_START )
+                } else {
+                    self.ser.write_code(codes::GET_PRIORITY_CACHE)?;
+                    self.ser.write_int(code as i64)
+                }
+            }
+            None => {
+                let _ = self.ser.cache.put(Val);
+                self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+                prim.serialize(self.ser)
+            }
+        }
+    }
 }
 
 
@@ -791,95 +831,101 @@ where
     fn serialize_none(self) -> Result<()> { self.ser.serialize_none() }
 
     #[inline]
-    fn serialize_unit(self) -> Result<()> { self.ser.serialize_unit() }
+    fn serialize_unit(self) -> Result<()> { self.ser.serialize_none() }
 
     #[inline]
-    fn serialize_some<S>(self, value: &S) -> Result<()>
-        where S: ?Sized + Serialize,
-    {
-         // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-         value.serialize(self)
-    }
-
-
-
-
-    #[inline]
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
-        // serialized as null
-        self.ser.serialize_unit_struct(_name)
-    }
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {self.ser.serialize_none()}
 
     #[inline]
     fn serialize_f32(self, _value: f32) -> Result<()> {
-        if !( (_value == 0.0) | (_value == 1.0)) {
-            self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        if (_value == 0.0) | (_value == 1.0) {
+            _value.serialize(self.ser)
+        } else {
+            let val = Value::from(_value);
+            self.cache_primitive(_value, val)
         }
-        _value.serialize(self.ser)
     }
 
     #[inline]
     fn serialize_f64(self, _value: f64) -> Result<()> {
-        if !( (_value == 0.0) | (_value == 1.0)) {
-            self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+        if (_value == 0.0) | (_value == 1.0) {
+            _value.serialize(self.ser)
+        } else {
+            let val = Value::from(_value);
+            self.cache_primitive(_value, val)
         }
-        _value.serialize(self.ser)
+    }
+
+    #[inline]
+    fn serialize_i8(self, _value: i8) -> Result<()> { self.cache_primitive(_value, Value::from(_value)) }
+
+    #[inline]
+    fn serialize_i16(self, _value: i16) -> Result<()> { self.cache_primitive(_value, Value::from(_value)) }
+
+    #[inline]
+    fn serialize_i32(self, _value: i32) -> Result<()> { self.cache_primitive(_value, Value::from(_value)) }
+
+    #[inline]
+    fn serialize_i64(self, _value: i64) -> Result<()> { self.cache_primitive(_value, Value::from(_value)) }
+
+    #[inline]
+    fn serialize_u8(self, _value: u8) -> Result<()> { self.cache_primitive(_value, Value::from(_value)) }
+
+    #[inline]
+    fn serialize_u16(self, _value: u16) -> Result<()> { self.cache_primitive(_value, Value::from(_value)) }
+
+    #[inline]
+    fn serialize_u32(self, _value: u32) -> Result<()> { self.cache_primitive(_value, Value::from(_value)) }
+
+    #[inline]
+    fn serialize_u64(self, _value: u64) -> Result<()> {
+         if (std::i64::MAX as u64) < _value {
+             Err(Error::Message("u64 too large for i64".to_string()))
+         } else {
+             self.cache_primitive(_value, Value::from(_value as i64))
+         }
     }
 
     #[inline]
     fn serialize_str(self, _value: &str) -> Result<()> {
         if _value.len() != 0 {
-            // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-            // _value.serialize(self.ser)
             let val = Value::from(_value.to_string());
-            let cached_code: Option<u8> = self.ser.cache.get(&val);
-
-            match cached_code {
-                Some(code) => {
-                    if code < ranges::PRIORITY_CACHE_PACKED_END {
-                        self.ser.write_code( code + codes::PRIORITY_CACHE_PACKED_START )
-                    } else {
-                        self.ser.write_code(codes::GET_PRIORITY_CACHE)?;
-                        self.ser.write_int(code as i64)
-                    }
-                }
-                None => {
-                    let _ = self.ser.cache.put(val);
-                    self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-                    _value.serialize(self.ser)
-                }
-            }
+            self.cache_primitive(_value, val)
         } else {
             _value.serialize(self.ser)
         }
     }
 
-    /////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////
-
     #[inline]
-    fn serialize_i8(self, _value: i8) -> Result<()> {
-        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-        _value.serialize(self.ser)
+    fn serialize_bytes(self, data: &[u8]) -> Result<()> {
+         let Val: Value = Value::from(data);
+         let cached_code: Option<u8> = self.ser.cache.get(&Val);
+         match cached_code {
+             Some(code) => {
+                 if code < ranges::PRIORITY_CACHE_PACKED_END {
+                     self.ser.write_code( code + codes::PRIORITY_CACHE_PACKED_START )
+                 } else {
+                     self.ser.write_code(codes::GET_PRIORITY_CACHE)?;
+                     self.ser.write_int(code as i64)
+                 }
+             }
+             None => {
+                 let _ = self.ser.cache.put(Val);
+                 self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
+                 self.ser.serialize_bytes(data)
+             }
+         }
     }
 
     #[inline]
-    fn serialize_i16(self, _value: i16) -> Result<()> {
-        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-        _value.serialize(self.ser)
+    fn serialize_some<S>(self, value: &S) -> Result<()>
+        where S: ?Sized + Serialize,
+    {
+         value.serialize(self)
     }
 
-    #[inline]
-    fn serialize_i32(self, _value: i32) -> Result<()> {
-        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-        _value.serialize(self.ser)
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////
 
-    #[inline]
-    fn serialize_i64(self, _value: i64) -> Result<()> {
-        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-        _value.serialize(self.ser)
-    }
 
     #[inline]
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
@@ -888,29 +934,10 @@ where
     }
 
     #[inline]
-    fn serialize_u8(self, _value: u8) -> Result<()> {
-        self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-        _value.serialize(self.ser)
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
+        Err(Error::UnsupportedType)
     }
 
-    #[inline]
-    fn serialize_u16(self, _value: u16) -> Result<()> {
-         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-         _value.serialize(self.ser)
-    }
-
-    #[inline]
-    fn serialize_u32(self, _value: u32) -> Result<()> {
-         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-         _value.serialize(self.ser)
-    }
-
-    #[inline]
-    fn serialize_u64(self, _value: u64) -> Result<()> {
-         // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-         // _value.serialize(self.ser)
-         Err(Error::UnsupportedType)
-    }
 
     #[inline]
     fn serialize_char(self, _value: char) -> Result<()> {
@@ -919,11 +946,6 @@ where
         Err(Error::UnsupportedType)
     }
 
-    #[inline]
-    fn serialize_bytes(self, data: &[u8]) -> Result<()> {
-         self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
-         self.ser.serialize_bytes(data)
-    }
 
     #[inline]
     fn serialize_unit_variant(self, _name: &'static str, _variant_index: u32, variant: &'static str) -> Result<()> {
@@ -959,11 +981,6 @@ where
     #[inline]
     fn serialize_tuple_variant(self,_name: &'static str,_variant_index: u32,variant: &'static str,_len: usize, ) -> Result<Self::SerializeTupleVariant> {
          Err(Error::UnsupportedType)
-    }
-
-    #[inline]
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        Err(Error::UnsupportedType)
     }
 
     #[inline]
