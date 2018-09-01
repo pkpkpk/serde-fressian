@@ -42,11 +42,6 @@ pub enum Value {
     // UTF8(&'a str),
     BYTES(ByteBuf), // ideally should be &'a [u8]
     LIST(Vec<Value>),
-    // gonna let the good people at mozilla make hard decisions for us:
-    //   " We're using BTree{Set, Map} rather than Hash{Set, Map} because the BTree variants
-    //    implement Hash. The Hash variants don't in order to preserve O(n) hashing
-    //    time, which is hard given recursive data structures.
-    //    See https://internals.rust-lang.org/t/implementing-hash-for-hashset-hashmap/3817/1 "
     MAP(BTreeMap<Value, Value>),
     SET(SET<Value>),
     SYM(SYM),
@@ -100,7 +95,7 @@ impl_into_value!(LONG_ARRAY: Long_Array);
 impl_into_value!(FLOAT_ARRAY: Float_Array);
 impl_into_value!(DOUBLE_ARRAY: Double_Array);
 impl_into_value!(BOOLEAN_ARRAY: Boolean_Array);
-
+impl_into_value!(BYTES: ByteBuf);
 
 impl<T: Into<Value>> From<Vec<T>> for Value {
     fn from(val: Vec<T>) -> Value {
@@ -129,6 +124,12 @@ impl<K,V> From<BTreeMap<K,V>> for Value
 {
     fn from(val: BTreeMap<K,V>) -> Value {
         Value::MAP(val.into_iter().map(|(k,v)|(k.into(), v.into())).collect())
+    }
+}
+
+impl<'a> From<&'a[u8]> for Value {
+    fn from(val: &'a[u8]) -> Value {
+        Value::BYTES(ByteBuf::from(val))
     }
 }
 
