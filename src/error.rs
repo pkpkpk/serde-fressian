@@ -38,12 +38,15 @@ pub enum ErrorCode{
     ExpectedBytesCode,
     InvalidUTF8,
     ExpectedStringCode,
+    ExpectedNonZeroReadLength,
 }
 
 struct ErrorImpl {
     code: ErrorCode,
     position: usize,
 }
+//would be nice to distinguish writing from reading errors rather
+// than generic position property
 
 impl Error {
     pub fn syntax(code: ErrorCode, position: usize) -> Self {

@@ -1,10 +1,15 @@
 use byteorder::{BigEndian, WriteBytesExt};
-use error::{Error, Result};
+use error::{Error, ErrorCode, Result};
 use std::cmp;
 
 pub struct ByteReader<'a> {
     input: &'a [u8],
     bytes_read: usize
+}
+
+fn rdr_error<'a, T>(rdr: &'a mut ByteReader, reason: ErrorCode) -> Result<T> {
+    let position: usize = rdr.get_bytes_read();
+    Err(Error::syntax(reason, position))
 }
 
 impl<'a> ByteReader<'a> {
@@ -39,9 +44,7 @@ impl<'a> ByteReader<'a> {
                 self.notify_bytes_read(1);
                 Ok(byte)
             }
-            None => {
-                Err(Error::Eof)
-            }
+            None => rdr_error(self, ErrorCode::Eof)
         }
     }
     pub fn read_i8(&mut self) -> Result<i8> {
@@ -53,19 +56,17 @@ impl<'a> ByteReader<'a> {
             Some(byte) => {
                 Ok(byte)
             }
-            None => {
-                Err(Error::Eof)
-            }
+            None => rdr_error(self, ErrorCode::Eof)
         }
     }
 
     pub fn read_bytes(&mut self, length: usize) -> Result<&[u8]>{
         if length == 0 {
-            Err(Error::Syntax)
+            rdr_error(self, ErrorCode::ExpectedNonZeroReadLength) // hmm
         } else {
             let end = self.bytes_read + length;
             if self.input.len() < end {
-                Err(Error::Eof)
+                rdr_error(self, ErrorCode::Eof)
             } else {
                 let start = self.bytes_read;
                 self.notify_bytes_read(length);
@@ -83,8 +84,8 @@ impl<'a> ByteReader<'a> {
 
 pub struct ByteWriter<T> {
     out: T,
-    bytes_written: u64 //make usize
-    //cache: Option<Vec<u8>>
+    bytes_written: usize
+    //cache: Option<Vec<u8>> //cache output vec?
     //checksum: Adler32
 }
 
@@ -93,7 +94,7 @@ pub trait IWriteBytes {
 
     fn write_bytes(&mut self, bytes: &[u8], off: usize, len: usize) -> Result<()>;
 
-    fn get_bytes_written(&self) -> u64;
+    fn get_bytes_written(&self) -> usize;
 }
 
 impl IWriteBytes for ByteWriter<Vec<u8>> {
@@ -105,18 +106,17 @@ impl IWriteBytes for ByteWriter<Vec<u8>> {
 
     fn write_bytes(&mut self, bytes: &[u8], off: usize, len: usize) -> Result<()> {
         let buf = &bytes[off as usize .. (off + len) as usize];
-        vec_write_bytes(&mut self.out, self.bytes_written as usize, buf);
-        self.notify_bytes_written(len as u64);
+        vec_write_bytes(&mut self.out, self.bytes_written, buf);
+        self.notify_bytes_written(len);
         Ok(())
     }
+    fn get_bytes_written(&self) -> usize { self.bytes_written }
+    // pub fn getChecksum(&self){ self.checksum.getChecksum() }
+}
 
-    fn get_bytes_written(&self) -> u64 {
-        self.bytes_written
-    }
-
-    // pub fn getChecksum(&self){
-    //     self.checksum.getChecksum()
-    // }
+fn wrt_error<W: IWriteBytes,T>(wrt: W, reason: ErrorCode) -> Result<T> {
+    let position: usize = wrt.get_bytes_written();
+    Err(Error::syntax(reason, position))
 }
 
 impl ByteWriter<Vec<u8>> {
@@ -144,8 +144,8 @@ impl ByteWriter<Vec<u8>> {
         } else {
             // TODO: cache + invalidate on writes
             //should check if byteswritten is same length as vec, if so just clone?
-            let mut v: Vec<u8> = Vec::with_capacity(self.bytes_written as usize);
-            v.extend_from_slice(&self.out[0..self.bytes_written as usize]);
+            let mut v: Vec<u8> = Vec::with_capacity(self.bytes_written);
+            v.extend_from_slice(&self.out[0..self.bytes_written]);
             return v;
         }
     }
@@ -155,13 +155,12 @@ impl ByteWriter<Vec<u8>> {
         self.bytes_written = 0;
     }
 
-    pub fn notify_bytes_written(&mut self, count: u64) {
+    pub fn notify_bytes_written(&mut self, count: usize) {
         self.bytes_written += count;
     }
 }
 
-fn vec_write_byte(vec: &mut Vec<u8>, bytes_written: u64, byte: u8) {
-    let bytes_written = bytes_written as usize;
+fn vec_write_byte(vec: &mut Vec<u8>, bytes_written: usize, byte: u8) {
     if bytes_written == 0 {
         if vec.len() == 0 {
             vec.push(byte);
