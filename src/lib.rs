@@ -25,6 +25,7 @@ pub mod ser;
 pub mod de;
 pub mod value;
 pub mod types;
+pub mod wasm;
 
 pub use types::{
     INST,
