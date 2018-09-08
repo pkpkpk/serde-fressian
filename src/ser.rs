@@ -3,7 +3,7 @@ use serde::ser::{self, Serialize};
 use imp::RawOutput::*;
 use imp::codes;
 use imp::ranges;
-use imp::error::{Error, Result};
+use error::{Error, Result};
 use imp::io::{ByteWriter, IWriteBytes};
 use value::{self, Value};
 use imp::cache::{Cache};

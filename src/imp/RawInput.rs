@@ -2,7 +2,7 @@
 
 use imp::codes;
 use imp::io::{ByteReader};
-use imp::error::{Error, Result};
+use error::{Error, Result};
 
 use byteorder::*;
 use std::convert::TryFrom;

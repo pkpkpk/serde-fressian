@@ -21,6 +21,8 @@ extern crate url;
 extern crate regex;
 
 mod imp;
+// pub use imp::{error};
+pub mod error;
 pub mod ser;
 pub mod de;
 pub mod value;

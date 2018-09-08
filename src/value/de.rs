@@ -9,7 +9,7 @@ use serde::de::{
 use ordered_float::OrderedFloat;
 use serde_bytes::ByteBuf;
 
-use imp::error::{Error};
+use error::{Error};
 use imp::codes;
 use value::Value;
 use INST::{INST};

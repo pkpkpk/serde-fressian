@@ -4,7 +4,7 @@ use serde::de::{
 };
 
 use imp::io::{ByteReader};
-use imp::error::{Error, Result};
+use error::{Error, Result};
 use imp::RawInput::{RawInput};
 use imp::codes;
 use value::{self, Value};

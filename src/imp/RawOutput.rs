@@ -7,7 +7,7 @@
 
 extern crate serde;
 
-use imp::error::{Error, Result};
+use error::{Error, Result};
 use imp::io::{ByteWriter, IWriteBytes};
 use imp::codes;
 use imp::ranges;

@@ -1,5 +1,5 @@
 use byteorder::{BigEndian, WriteBytesExt};
-use imp::error::{Error, Result};
+use error::{Error, Result};
 use std::cmp;
 
 pub struct ByteReader<'a> {
