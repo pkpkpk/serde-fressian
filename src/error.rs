@@ -8,13 +8,61 @@ use serde::{ser, de};
 pub type Result<T> = ::std::result::Result<T, Error>;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Error {
+pub struct Error {
+    /// This `Box` allows us to keep the size of `Error` as small as possible. A
+    /// larger `Error` type was substantially slower due to all the functions
+    /// that pass around `Result<T, Error>`.
+    err: Box<ErrorImpl>,
+}
+
+// #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+// pub enum Category {
+//     Io, /// The error was caused by a failure to read or write bytes on an IO stream.
+//     Syntax, /// The error was caused by input that was not syntactically valid JSON.
+//     Data,/// The error was caused by input data that was semantically incorrect.
+//     Eof,
+// }
+
+pub enum ErrorCode{
+    Msg(Box<str>),
     Message(String),
     UnmatchedCode(u8),
     UnsupportedType,
     Eof,
     Syntax,
+    Expectedi64,
+    ExpectedDoubleCode,
+    ExpectedFloatCode,
+    ExpectedBooleanCode,
+    ExpectedChunkBytesConclusion,
+    ExpectedBytesCode,
+    InvalidUTF8,
+    ExpectedStringCode,
 }
+
+struct ErrorImpl {
+    code: ErrorCode,
+    position: usize,
+}
+
+impl Error {
+    pub fn syntax(code: ErrorCode, position: usize) -> Self {
+        Error {
+            err: Box::new(ErrorImpl {
+                code: code,
+                position: position,
+            }),
+        }
+    }
+
+
+    // pub fn msg(msg: str) -> Self {
+    //     Error {
+    //         err: Box::new(ErrorCode::Msg(msg.into_boxed_str())),
+    //     }
+    // }
+}
+
 
 impl ser::Error for Error {
     fn custom<T: Display>(msg: T) -> Self {

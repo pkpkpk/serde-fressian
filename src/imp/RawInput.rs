@@ -2,13 +2,18 @@
 
 use imp::codes;
 use imp::io::{ByteReader};
-use error::{Error, Result};
+use error::{Error, ErrorCode, Result};
 
 use byteorder::*;
 use std::convert::TryFrom;
 
 #[derive(Clone, Debug)]
 pub struct RawInput;
+
+fn error<'a, T>(rdr: &'a mut ByteReader, reason: ErrorCode) -> Result<T> {
+    let position: usize = rdr.get_bytes_read();
+    Err(Error::syntax(reason, position))
+}
 
 impl<'a> RawInput {
 
@@ -132,9 +137,8 @@ impl<'a> RawInput {
             code if code == (codes::INT as i8) => {
                 self.read_raw_i64(reader)
             }
-            _ => {
-                Err(Error::Syntax) // "expected i64..."///////////////////////////////////////////
-            }
+
+            _ => error(reader, ErrorCode::Expectedi64)
         }
     }
 
@@ -178,7 +182,7 @@ impl<'a> RawInput {
             codes::DOUBLE_1 => {
                 Ok(1.0)
             }
-            _ => Err(Error::Syntax) // expected double, code///////////////////////////////////////
+            _ => error(reader, ErrorCode::ExpectedDoubleCode)
         }
     }
 
@@ -192,7 +196,7 @@ impl<'a> RawInput {
             codes::FLOAT => {
                 self.read_raw_float(reader)
             }
-            _ => Err(Error::Syntax) // expected float, code////////////////////////////////////////
+            _ => error(reader, ErrorCode::ExpectedFloatCode)
         }
     }
 
@@ -209,7 +213,7 @@ impl<'a> RawInput {
             codes::FALSE => {
                 Ok(false)
             }
-            _ => Err(Error::Syntax) // expected boolean, code//////////////////////////////////////
+            _ => error(reader, ErrorCode::ExpectedBooleanCode)
         }
     }
 
@@ -229,9 +233,8 @@ impl<'a> RawInput {
             code = *reader.read_u8()?;
         }
         if code != codes::BYTES {
-            Err(Error::Syntax)//expected conclusion of chunked bytes///////////////////////////////
+            error(reader, ErrorCode::ExpectedChunkBytesConclusion)
         } else {
-            // Ok(buffer.as_slice())
             Ok(buffer)
         }
     }
@@ -249,7 +252,7 @@ impl<'a> RawInput {
             // codes::BYTES_CHUNK => {///////////////////////////////////////////////////////////////
             //     self.internal_read_chunked_bytes()
             // }
-            _ => Err(Error::Syntax) // expected bytes, code//////////////////////////////////////
+            _ => error(reader, ErrorCode::ExpectedBytesCode)
         }
     }
 
@@ -302,7 +305,7 @@ impl<'a> RawInput {
                         buf.push(n as u16)
                     }
                     _ => {
-                        res = Err(Error::Syntax) /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+                        res = error(reader, ErrorCode::InvalidUTF8)
                     }
                 }
             };
@@ -312,7 +315,7 @@ impl<'a> RawInput {
                 if s.is_ok(){
                     Ok(s.unwrap())
                 } else {
-                    Err(Error::Syntax) /////  throw new RuntimeException(String.format("Invalid UTF-8: %X", ch));/////
+                    error(reader, ErrorCode::InvalidUTF8)
                 }
             })
         }
@@ -336,7 +339,7 @@ impl<'a> RawInput {
                 let length = RawInput.read_count(rdr)?;
                 RawInput.read_raw_utf8(rdr, length as usize).and_then(|s: &str| Ok( s.to_string() ) )
             }
-            _ => { Err(Error::Syntax)}
+            _ => error(rdr, ErrorCode::ExpectedStringCode)
         }
     }
 
