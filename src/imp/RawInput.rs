@@ -290,7 +290,7 @@ impl<'a> RawInput {
                         let ch0 = ch as u32;
                         let ch1 = bytes[pos] as u32 & 0xff;
                         pos += 1;
-                        let n = ( (ch0 & 0x1f as u32) << 6 | (ch1 & 0x3f as u32));
+                        let n =  (ch0 & 0x1f as u32) << 6 | (ch1 & 0x3f as u32);
                         buf.push(n as u16)
                     }
                     14 => {
@@ -298,7 +298,7 @@ impl<'a> RawInput {
                         let ch1 = bytes[pos] as u32;
                         let ch2 = bytes[pos + 1] as u32;
                         pos += 2;
-                        let n: u32 = ((ch0 & 0x0f) << 12 | (ch1 & 0x3f) << 6 | ch2 & 0x3f);
+                        let n: u32 = (ch0 & 0x0f) << 12 | (ch1 & 0x3f) << 6 | ch2 & 0x3f;
                         buf.push(n as u16)
                     }
                     _ => {
