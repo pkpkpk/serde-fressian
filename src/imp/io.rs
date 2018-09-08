@@ -207,7 +207,7 @@ mod test {
         assert_eq!(Ok(&1), rdr.read_u8());
         assert_eq!(Ok(&2), rdr.read_u8());
         assert_eq!(3, rdr.get_bytes_read());
-        assert_eq!(Err(Error::Eof), rdr.read_u8());
+        assert_eq!(Err(Error::Eof(3)), rdr.read_u8());
         assert_eq!(3, rdr.get_bytes_read());
         rdr.reset();
         assert_eq!(0, rdr.get_bytes_read());
@@ -219,16 +219,16 @@ mod test {
         let data: Vec<u8> = vec![0, 1, 2, 3, 4];
         let mut rdr = ByteReader::from_vec(&data);
 
-        assert_eq!(Err(Error::Eof), rdr.read_bytes(6));
+        assert_eq!(Err(Error::Eof(0)), rdr.read_bytes(6));
         let control: &[u8] = &[0,1];
         assert_eq!(0, rdr.get_bytes_read());
         assert_eq!(Ok(control), rdr.read_bytes(2));
         assert_eq!(2, rdr.get_bytes_read());
-        assert_eq!(Err(Error::Eof), rdr.read_bytes(4));
+        assert_eq!(Err(Error::Eof(2)), rdr.read_bytes(4));
         let control: &[u8] = &[2,3,4];
         assert_eq!(Ok(control), rdr.read_bytes(3));
         assert_eq!(5, rdr.get_bytes_read());
-        assert_eq!(Err(Error::Eof), rdr.read_u8());
+        assert_eq!(Err(Error::Eof(5)), rdr.read_u8());
         rdr.reset();
         let control: &[u8] = &[0,1,2,3,4];
         assert_eq!(Ok(control), rdr.read_bytes(5));

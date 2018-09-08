@@ -9,9 +9,10 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error {
-    /// This `Box` allows us to keep the size of `Error` as small as possible. A
-    /// larger `Error` type was substantially slower due to all the functions
-    /// that pass around `Result<T, Error>`.
+    /// Serde_json::
+    ///   This `Box` allows us to keep the size of `Error` as small as possible. A
+    ///   larger `Error` type was substantially slower due to all the functions
+    ///   that pass around `Result<T, Error>`.
     err: Box<ErrorImpl>,
 }
 
@@ -23,6 +24,7 @@ pub struct Error {
 //     Eof,
 // }
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum ErrorCode{
     Msg(Box<str>),
     Message(String),
@@ -39,16 +41,29 @@ pub enum ErrorCode{
     InvalidUTF8,
     ExpectedStringCode,
     ExpectedNonZeroReadLength,
+    IntTooLargeFori64,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 struct ErrorImpl {
     code: ErrorCode,
     position: usize,
+    // would be nice to distinguish writing from reading errors rather
+    // than generic position property,
+    // write position is not very useful
 }
-//would be nice to distinguish writing from reading errors rather
-// than generic position property
+
 
 impl Error {
+    pub fn msg(msg: String) -> Self {
+        Error {
+            err: Box::new(ErrorImpl {
+                code: ErrorCode::Message(msg),
+                position: 0,
+            }),
+        }
+    }
+
     pub fn syntax(code: ErrorCode, position: usize) -> Self {
         Error {
             err: Box::new(ErrorImpl {
@@ -58,10 +73,23 @@ impl Error {
         }
     }
 
+    pub fn Eof(position: usize) -> Self {
+        Error {
+            err: Box::new(ErrorImpl {
+                code: ErrorCode::Eof,
+                position: position,
+            }),
+        }
+    }
 
-    // pub fn msg(msg: str) -> Self {
-    //     Error {
-    //         err: Box::new(ErrorCode::Msg(msg.into_boxed_str())),
+    // pub fn fix_position<F>(self, f: F) -> Self
+    // where
+    //     F: FnOnce(ErrorCode) -> Error,
+    // {
+    //     if self.err.line == 0 {
+    //         f(self.err.code)
+    //     } else {
+    //         self
     //     }
     // }
 }
@@ -69,13 +97,13 @@ impl Error {
 
 impl ser::Error for Error {
     fn custom<T: Display>(msg: T) -> Self {
-         Error::Message(msg.to_string())
+         Error::msg(msg.to_string())
     }
 }
 
 impl de::Error for Error {
     fn custom<T: Display>(msg: T) -> Self {
-         Error::Message(msg.to_string())
+         Error::msg(msg.to_string())
     }
 }
 
@@ -87,10 +115,12 @@ impl Display for Error {
 
 impl std::error::Error for Error {
     fn description(&self) -> &str {
-        match *self {
-            Error::Message(ref msg) => msg,
-            Error::Eof => "unexpected end of input",
-            /* and so forth */
+        let err = *self.err;
+        let code = err.code;
+        match code {
+            ErrorCode::Message(ref msg) => msg,
+            ErrorCode::Eof => "unexpected end of input",
+            /////////////////////////////////////////////////////////////////////////
             _ => unimplemented!(),
         }
     }
