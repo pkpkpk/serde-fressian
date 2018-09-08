@@ -3,7 +3,7 @@ use serde::ser::{self, Serialize};
 use imp::RawOutput::*;
 use imp::codes;
 use imp::ranges;
-use error::{Error, Result};
+use error::{Error, ErrorCode, Result};
 use imp::io::{ByteWriter, IWriteBytes};
 use value::{self, Value};
 use imp::cache::{Cache};
@@ -11,6 +11,13 @@ use imp::cache::{Cache};
 pub struct Serializer<W> {
     writer: W,
     cache: Cache,
+}
+
+fn error<W,T>(ser: &Serializer<W>, reason: ErrorCode) -> Result<T>
+    where W: IWriteBytes
+{
+    let position: usize = ser.writer.get_bytes_written();
+    Err(Error::syntax(reason, position))
 }
 
 impl<W> Serializer<W>
@@ -276,7 +283,7 @@ where
 
     fn serialize_u64(self, v: u64) -> Result<()> {
         if (std::i64::MAX as u64) < v {
-            Err(Error::Message("u64 too large for i64".to_string()))
+            error(self, ErrorCode::IntTooLargeFori64)
         } else {
             self.write_int(v as i64)
         }
@@ -352,7 +359,7 @@ where
                 value.serialize(TASerializer{ser: self})
             }
             "OBJECT_ARRAY" => {
-                Err(Error::UnsupportedType)
+                error(self, ErrorCode::UnsupportedType)
             }
             _ => value.serialize(self)
         }
@@ -364,13 +371,8 @@ where
                 self.write_list_header(n)?;
                 Ok(Compound::LIST{ser: self, cache_elements: false})
             }
-            None => {
-                // might be able to swing this with .end_list() method on an open-list compound variant
-                Err(Error::Message(
-                    "cannot use serde::ser::serialize on uncounted sequences at this time.
-                     If known to be finite length, use serializer.write_list().
-                     If indeterminate length, use serializer.begin_open_list()".to_string()))
-            }
+            // might be able to swing this with .end_list() method on an open-list compound variant////
+            None => error(self, ErrorCode::UnsupportedType)
         }
     }
 
@@ -382,13 +384,8 @@ where
                 self.write_list_header(length)?;
                 Ok(Compound::MAP{ser: self})
             }
-            None => {
-                // might be able to swing this with .end_list() method on an open-list compound variant////////
-                Err(Error::Message(
-                    "cannot use serde::ser::serialize on uncounted sequences at this time.
-                     If known to be finite length, use serializer.write_map().
-                     If indeterminate length, write codes::MAP and serializer.begin_open_list()".to_string()))
-            }
+            // might be able to swing this with .end_list() method on an open-list compound variant////
+            None => error(self, ErrorCode::UnsupportedType)
         }
     }
 
@@ -673,9 +670,8 @@ where
                 RawOutput.write_int(&mut self.ser.writer, n as i64)?;
                 Ok(TACompound{ser: self.ser})
             }
-            None => {
-                Err(Error::Syntax)
-            }
+            // typed arrays must length. might be able to relax this see above
+            None => error(self.ser, ErrorCode::UnsupportedType)
         }
     }
 
@@ -713,94 +709,96 @@ where
     type SerializeStructVariant = ser::Impossible<(), Error>;
 
     #[inline]
-    fn serialize_i8(self, _value: i8) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_i8(self, _value: i8) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
-    fn serialize_i16(self, _value: i16) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_i16(self, _value: i16) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
-    fn serialize_u8(self, _value: u8) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_u8(self, _value: u8) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
-    fn serialize_u16(self, _value: u16) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_u16(self, _value: u16) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
-    fn serialize_u32(self, _value: u32) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_u32(self, _value: u32) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
-    fn serialize_u64(self, _value: u64) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_u64(self, _value: u64) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
-    fn serialize_char(self, _value: char) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_char(self, _value: char) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
-    fn serialize_bytes(self, data: &[u8]) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_bytes(self, data: &[u8]) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
-    fn serialize_unit(self) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_unit(self) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> { Err(Error::UnsupportedType) }
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> { error(self.ser, ErrorCode::UnsupportedType) }
 
     #[inline]
     fn serialize_unit_variant(self, _name: &'static str, _variant_index: u32, variant: &'static str) -> Result<()> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<()>
     where T: ?Sized + Serialize, {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_newtype_variant<T>(self,_name: &'static str,_variant_index: u32,variant: &'static str,value: &T,) -> Result<()>
     where T: ?Sized + Serialize, {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_none(self) -> Result<()> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_some<S>(self, value: &S) -> Result<()>
     where S: ?Sized + Serialize, {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
-    fn serialize_tuple_struct(self,_name: &'static str, len: usize,) -> Result<Self::SerializeTupleStruct> { Err(Error::UnsupportedType)}
+    fn serialize_tuple_struct(self,_name: &'static str, len: usize,) -> Result<Self::SerializeTupleStruct> {
+        error(self.ser, ErrorCode::UnsupportedType)
+    }
 
     #[inline]
     fn serialize_tuple_variant(self,_name: &'static str,_variant_index: u32,variant: &'static str,_len: usize, ) -> Result<Self::SerializeTupleVariant> {
-         Err(Error::UnsupportedType)
+         error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_struct( self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_struct_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self::SerializeStructVariant> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_str(self, _value: &str) -> Result<()> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 }
 /////////////////////////////////////////////////////////////////////////////
@@ -880,7 +878,7 @@ where
     #[inline]
     fn serialize_u64(self, _value: u64) -> Result<()> {
          if (std::i64::MAX as u64) < _value {
-             Err(Error::Message("u64 too large for i64".to_string()))
+             error(self.ser, ErrorCode::IntTooLargeFori64)
          } else {
              self.ser.caching_serialize(_value as i64)
          }
@@ -912,12 +910,12 @@ where
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
         // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
         // self.ser.serialize_seq(_len)
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
@@ -925,7 +923,7 @@ where
     where T: ?Sized + Serialize, {
          // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
          // self.ser.serialize_newtype_struct(_name, value)
-         Err(Error::UnsupportedType)
+         error(self.ser, ErrorCode::UnsupportedType)
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -935,42 +933,42 @@ where
     #[inline]
     fn serialize_newtype_variant<T>(self,_name: &'static str,_variant_index: u32,variant: &'static str,value: &T,) -> Result<()>
     where T: ?Sized + Serialize, {
-         Err(Error::UnsupportedType)
+         error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_char(self, _value: char) -> Result<()> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_unit_variant(self, _name: &'static str, _variant_index: u32, variant: &'static str) -> Result<()> {
-         Err(Error::UnsupportedType)
+         error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_tuple_struct(self,_name: &'static str, len: usize,) -> Result<Self::SerializeTupleStruct> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_tuple_variant(self,_name: &'static str,_variant_index: u32,variant: &'static str,_len: usize, ) -> Result<Self::SerializeTupleVariant> {
-         Err(Error::UnsupportedType)
+         error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_struct( self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
     #[inline]
     fn serialize_struct_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self::SerializeStructVariant> {
-        Err(Error::UnsupportedType)
+        error(self.ser, ErrorCode::UnsupportedType)
     }
 
 }
