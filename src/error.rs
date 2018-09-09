@@ -2,33 +2,18 @@ extern crate serde;
 
 use std;
 use std::fmt::{self, Debug, Display};
-
-use serde::{ser, de};
+use serde::{de};
+use serde::ser::{self,Serialize, Serializer, SerializeMap};
+use std::io;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 
-// #[derive(Debug, PartialEq)]
-// #[derive(Debug)]
 pub struct Error {
-    /// Serde_json::
-    ///   This `Box` allows us to keep the size of `Error` as small as possible. A
-    ///   larger `Error` type was substantially slower due to all the functions
-    ///   that pass around `Result<T, Error>`.
-    err: Box<ErrorImpl>,
+    pub err: Box<ErrorImpl>,
 }
 
-// #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-// pub enum Category {
-//     Io, /// The error was caused by a failure to read or write bytes on an IO stream.
-//     Syntax, /// The error was caused by input that was not syntactically valid JSON.
-//     Data,/// The error was caused by input data that was semantically incorrect.
-//     Eof,
-// }
-use std::io;
-
 // #[derive(Debug, PartialEq)]
-// #[derive(Debug)]
-pub enum ErrorCode{
+pub enum ErrorCode {
     // Msg(Box<str>),
     Message(String),
     UnmatchedCode(u8),
@@ -54,33 +39,68 @@ pub enum ErrorCode{
     AttemptToReadPastEnd,
 }
 
-// #[derive(Debug, PartialEq)]
-struct ErrorImpl {
-    code: ErrorCode,
-    position: usize,
-    // would be nice to distinguish writing from reading errors rather
-    // than generic position property,
-    // write position is not very useful
+// #[derive(Debug)]
+pub struct ErrorImpl {
+    pub code: ErrorCode,
+    pub position: usize,
 }
 
-
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize)]
 pub enum Category {
     Io, /// The error was caused by a failure to read or write bytes on an IO stream.
     Syntax, /// The error was caused by input that was not syntactically valid JSON.
     Eof,
 }
 
-impl Error {
-    pub fn is_eof(&self) -> bool { self.classify() == Category::Eof }
-
+impl ErrorImpl{
     pub fn classify(&self) -> Category {
-        match self.err.code{
+        match self.code{
             ErrorCode::Eof => Category::Eof,
             /////////////////////////
             _ => Category::Syntax
         }
     }
+}
+
+impl Serialize for ErrorImpl {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // identity as serde error
+        // would be nice to distinguish writing from reading errors rather
+        // than generic position property,
+        // write position is not very useful
+        let mut map_state = serializer.serialize_map(Some(3))?;
+
+
+        map_state.serialize_key("Category")?;
+        map_state.serialize_value(&self.classify())?;
+
+        // map_state.serialize_key("ErrorCode")?;
+        // // map_state.serialize_value(&self.code)?;
+        // match self.code {
+        //     ErrorCode::Io(_) => {
+        //         map_state.serialize_value("io-error")?;
+        //     },
+        //     _ => {
+        //         map_state.serialize_value(&self.code)?;
+        //     }
+        // }
+
+        map_state.serialize_key("position")?;
+        map_state.serialize_value(&self.position)?;
+        map_state.end()
+    }
+}
+
+
+
+
+impl Error {
+    pub fn is_eof(&self) -> bool { self.classify() == Category::Eof }
+
+    pub fn classify(&self) -> Category { self.err.classify() }
 
     pub fn msg(msg: String) -> Self {
         Error {
