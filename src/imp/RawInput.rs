@@ -357,103 +357,103 @@ mod test {
         // {:n 0, :switch 64, :fn :raw-byte, :ubytes [0]}
         let data: Vec<u8> = vec![0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(0), RawInput.read_int(&mut rdr));
+        assert_eq!(0, RawInput.read_int(&mut rdr).unwrap());
 
         // {:n 80, :switch 57, :fn :raw-byte, :ubytes [80 80]}
         let data: Vec<u8> = vec![80,80];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(80), RawInput.read_int(&mut rdr));
+        assert_eq!(80, RawInput.read_int(&mut rdr).unwrap());
 
         // {:n -80, :switch 57, :fn :raw-byte, :ubytes [79 176], :bytes [79 -80]}
         let data: Vec<u8> = vec![79,176];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(-80), RawInput.read_int(&mut rdr));
+        assert_eq!(-80, RawInput.read_int(&mut rdr).unwrap());
 
         // {:n 4096, :switch 51, :fn :raw-i16, :ubytes [104 16 0], :bytes [104 16 0]}
         let data: Vec<u8> = vec![104, 16, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(4096), RawInput.read_int(&mut rdr));
+        assert_eq!(4096, RawInput.read_int(&mut rdr).unwrap());
 
         // {:n -4096, :switch 52, :fn :raw-byte, :ubytes [64 0], :bytes [64 0]}
         let data: Vec<u8> = vec![64, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(-4096), RawInput.read_int(&mut rdr));
+        assert_eq!(-4096, RawInput.read_int(&mut rdr).unwrap());
 
 
         // {:n 32768, :switch 48, :fn :raw-i16, :ubytes [104 128 0], :bytes [104 -128 0] :form "Short/MAX_VALUE"}
         let data: Vec<u8> = vec![104, 128, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(32768), RawInput.read_int(&mut rdr));
+        assert_eq!(32768, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value -32768, :form "Short/MIN_VALUE", :n -32768, :switch 49, :fn :raw-i16, :ubytes [103 128 0]}
         let data: Vec<u8> = vec![103, 128, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(-32768), RawInput.read_int(&mut rdr));
+        assert_eq!(-32768, RawInput.read_int(&mut rdr).unwrap());
 
         // {:n -16777216, :switch 40, :fn :raw-i24, :ubytes [113 0 0 0], :bytes [113 0 0 0]}
         let data: Vec<u8> = vec![113, 0, 0, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(-16777216), RawInput.read_int(&mut rdr));
+        assert_eq!(-16777216, RawInput.read_int(&mut rdr).unwrap());
 
         // {:n 16777216, :switch 39, :fn :raw-i24, :ubytes [115 0 0 0], :bytes [115 0 0 0]}
         let data: Vec<u8> = vec![115, 0, 0, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(16777216), RawInput.read_int(&mut rdr));
+        assert_eq!(16777216, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value -2147483648, :form "Integer/MIN_VALUE", :switch 33, :fn :raw-i32, :ubytes [117 128 0 0 0], :bytes [117 -128 0 0 0]}
         let data: Vec<u8> = vec![117, 128, 0, 0, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(-2147483648), RawInput.read_int(&mut rdr));
+        assert_eq!(-2147483648, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value 2147483647, :form "Integer/MAX_VALUE", :switch 33, :fn :raw-i32, :ubytes [118 127 255 255 255], :bytes [118 127 -1 -1 -1]}
         let data: Vec<u8> = vec![118, 127, 255, 255, 255];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(2147483647), RawInput.read_int(&mut rdr));
+        assert_eq!(2147483647, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value -549755813887, :form "(long -549755813887)", :switch 25, :fn :raw-i40, :ubytes [121 128 0 0 0 1], :bytes [121 -128 0 0 0 1]}
         let data: Vec<u8> = vec![121, 128, 0,0, 0, 1];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(-549755813887), RawInput.read_int(&mut rdr));
+        assert_eq!(-549755813887, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value 549755813888, :form "(long 549755813888)", :switch 24, :fn :raw-i40, :ubytes [122 128 0 0 0 0], :bytes [122 -128 0 0 0 0]}
         let data: Vec<u8> = vec![122, 128, 0,0, 0, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(549755813888), RawInput.read_int(&mut rdr));
+        assert_eq!(549755813888, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value 140737490000000, :form "(long 1.4073749E14)", :switch 16, :fn :raw-i48, :ubytes [126 128 0 0 25 24 128], :bytes [126 -128 0 0 25 24 -128]}
         let data: Vec<u8> = vec![126, 128, 0, 0, 25, 24, 128];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(140737490000000), RawInput.read_int(&mut rdr));
+        assert_eq!(140737490000000, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value 9007199254740991, :form "(long  9007199254740991)", :switch 11, :fn :raw-i64, :ubytes [248 0 31 255 255 255 255 255 255], :bytes [-8 0 31 -1 -1 -1 -1 -1 -1]}
         let data: Vec<u8> = vec![248, 0, 31, 255, 255, 255, 255, 255, 255];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(9007199254740991), RawInput.read_int(&mut rdr));
+        assert_eq!(9007199254740991, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value 9007199254740992, :form "(long 9007199254740992)", :switch 10, :fn :raw-i64, :ubytes [248 0 32 0 0 0 0 0 0], :bytes [-8 0 32 0 0 0 0 0 0]}
         let data: Vec<u8> = vec![248, 0, 32, 0, 0, 0, 0, 0, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(9007199254740992), RawInput.read_int(&mut rdr));
+        assert_eq!(9007199254740992, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value -9007199254740991, :form "(long -9007199254740991)", :switch 11, :fn :raw-i64, :ubytes [248 255 224 0 0 0 0 0 1], :bytes [-8 -1 -32 0 0 0 0 0 1]}
         let data: Vec<u8> = vec![248, 255, 224, 0, 0, 0, 0, 0, 1];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(-9007199254740991), RawInput.read_int(&mut rdr));
+        assert_eq!(-9007199254740991, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value -9007199254740993, :form "(long -9007199254740993)", :switch 10, :fn :raw-i64, :ubytes [248 255 223 255 255 255 255 255 255], :bytes [-8 -1 -33 -1 -1 -1 -1 -1 -1]}
         let data: Vec<u8> = vec![248, 255, 223, 255, 255, 255, 255, 255, 255];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(-9007199254740993), RawInput.read_int(&mut rdr));
+        assert_eq!(-9007199254740993, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value 9223372036854775807, :form "Long/MAX_VALUE", :switch 1, :fn :raw-i64, :ubytes [248 127 255 255 255 255 255 255 255], :bytes [-8 127 -1 -1 -1 -1 -1 -1 -1]}
         let data: Vec<u8> = vec![248, 127, 255, 255, 255, 255, 255, 255, 255];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(9223372036854775807), RawInput.read_int(&mut rdr));
+        assert_eq!(9223372036854775807, RawInput.read_int(&mut rdr).unwrap());
 
         // {:value -9223372036854775808, :form "Long/MIN_VALUE", :switch 1, :fn :raw-i64, :ubytes [248 128 0 0 0 0 0 0 0], :bytes [-8 -128 0 0 0 0 0 0 0]}
         let data: Vec<u8> = vec![248, 128, 0, 0, 0, 0, 0, 0, 0];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(-9223372036854775808), RawInput.read_int(&mut rdr));
+        assert_eq!(-9223372036854775808, RawInput.read_int(&mut rdr).unwrap());
 
     }
 
@@ -462,41 +462,41 @@ mod test {
         // {:form "(float 32.2)", :bytes [-7 66 0 -52 -51], :ubytes [249 66 0 204 205], :byte-count 5, :footer false, :value 32.2}
         let data: Vec<u8> = vec![249, 66, 0, 204, 205];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(32.2), RawInput.read_float(&mut rdr));
+        assert_eq!(32.2, RawInput.read_float(&mut rdr).unwrap());
 
         // {:form "(float Float/MIN_VALUE)", :bytes [-7 0 0 0 1], :ubytes [249 0 0 0 1], :byte-count 5, :footer false, :value 1.4E-45}
         let data: Vec<u8> = vec![249, 0, 0, 0, 1];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(1.4E-45), RawInput.read_float(&mut rdr));
+        assert_eq!(1.4E-45, RawInput.read_float(&mut rdr).unwrap());
 
         // {:form "(float Float/MAX_VALUE)", :bytes [-7 127 127 -1 -1], :ubytes [249 127 127 255 255], :byte-count 5, :footer false, :value 3.4028235E38}
         let data: Vec<u8> = vec![249, 127, 127, 255, 255];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(3.4028235E38), RawInput.read_float(&mut rdr));
+        assert_eq!(3.4028235E38, RawInput.read_float(&mut rdr).unwrap());
 
         // {:form "(java.lang.Double. 4.9E-324)", :bytes [-6 0 0 0 0 0 0 0 1], :ubytes [250 0 0 0 0 0 0 0 1], :byte-count 9, :footer false, :value 4.9E-324}
         let data: Vec<u8> = vec![250, 0, 0, 0, 0, 0, 0, 0, 1];
         let mut rdr = ByteReader::from_vec(&data);
         let control: f64 = 4.9E-324;
-        assert_eq!(Ok(control), RawInput.read_double(&mut rdr));
+        assert_eq!(control, RawInput.read_double(&mut rdr).unwrap());
 
         // {:form "9.8461319849314E10", :bytes [-6 66 54 -20 -64 -126 -87 80 98], :ubytes [250 66 54 236 192 130 169 80 98], :byte-count 9, :footer false, :value 9.8461319849314E10}
         let data: Vec<u8> = vec![250, 66, 54, 236, 192, 130, 169, 80, 98];
         let mut rdr = ByteReader::from_vec(&data);
         let control: f64 = 9.8461319849314E10;
-        assert_eq!(Ok(control), RawInput.read_double(&mut rdr));
+        assert_eq!(control, RawInput.read_double(&mut rdr).unwrap());
 
         // {:form "0.0", :bytes [-5], :ubytes [251], :byte-count 1, :footer false, :value 0.0}
         let data: Vec<u8> = vec![251];
         let mut rdr = ByteReader::from_vec(&data);
         let control: f64 = 0.0;
-        assert_eq!(Ok(control), RawInput.read_double(&mut rdr));
+        assert_eq!(control, RawInput.read_double(&mut rdr).unwrap());
 
         // {:form "1.0", :bytes [-4], :ubytes [252], :byte-count 1, :footer false, :value 1.0}
         let data: Vec<u8> = vec![252];
         let mut rdr = ByteReader::from_vec(&data);
         let control: f64 = 1.0;
-        assert_eq!(Ok(control), RawInput.read_double(&mut rdr));
+        assert_eq!(control, RawInput.read_double(&mut rdr).unwrap());
     }
 
     #[test]
@@ -504,12 +504,12 @@ mod test {
         // {:form "true", :bytes [-11], :ubytes [245], :byte-count 1, :footer false, :value true}
         let data: Vec<u8> = vec![245];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(true), RawInput.read_boolean(&mut rdr));
+        assert_eq!(true, RawInput.read_boolean(&mut rdr).unwrap());
 
         // {:form "false", :bytes [-10], :ubytes [246], :byte-count 1, :footer false, :value false}
         let data: Vec<u8> = vec![246];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(false), RawInput.read_boolean(&mut rdr));
+        assert_eq!(false, RawInput.read_boolean(&mut rdr).unwrap());
     }
 
     #[test]
@@ -518,14 +518,14 @@ mod test {
         let data: Vec<u8> = vec![213, 254, 255, 0, 1, 2];
         let control: &[u8] = &[254, 255, 0, 1, 2];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), RawInput.read_bytes(&mut rdr));
+        assert_eq!(control, RawInput.read_bytes(&mut rdr).unwrap());
 
         // {:form "(byte-array [-4 -3 -2 -1 0 1 2 3 4])", :bytes [-39 9 -4 -3 -2 -1 0 1 2 3 4], :ubytes [217 9 252 253 254 255 0 1 2 3 4], :byte-count 11, :footer false, :input [-4 -3 -2 -1 0 1 2 3 4]}
         // unpacked length
         let data: Vec<u8> = vec![217, 9, 252, 253, 254, 255, 0, 1, 2, 3, 4];
         let control: &[u8] = &[252, 253, 254, 255, 0, 1, 2, 3, 4];
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), RawInput.read_bytes(&mut rdr));
+        assert_eq!(control, RawInput.read_bytes(&mut rdr).unwrap());
 
         //missing packed bytes
     }
@@ -536,36 +536,36 @@ mod test {
         let data: Vec<u8> = vec![218];
         let control = "".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
+        assert_eq!(control, RawInput.read_string(&mut rdr).unwrap());
 
         // {:form "\"hola\"", :bytes [-34 104 111 108 97], :ubytes [222 104 111 108 97], :byte-count 5, :footer false, :value "hola"}
         let data: Vec<u8> = vec![222, 104, 111, 108, 97];
         let control = "hola".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
+        assert_eq!(control, RawInput.read_string(&mut rdr).unwrap());
 
         // {:form "\"é\"", :bytes [-35 101 -52 -127], :ubytes [221 101 204 129], :byte-count 4, :footer false, :value "é"}
         let data: Vec<u8> = vec![221, 101, 204, 129];
         let control = "é".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
+        assert_eq!(control, RawInput.read_string(&mut rdr).unwrap());
 
         // {:value "❤️", :bytes [-32 -30 -99 -92 -17 -72 -113], :ubytes [224 226 157 164 239 184 143], :byte-count 7, :footer false}
         let data: Vec<u8> = vec![224, 226, 157, 164, 239, 184, 143];
         let control = "❤️".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
+        assert_eq!(control, RawInput.read_string(&mut rdr).unwrap());
 
         // {:value "😎", :bytes [-32 -19 -96 -67 -19 -72 -114], :ubytes [224 237 160 189 237 184 142], :byte-count 7, :footer false}
         let data: Vec<u8> = vec![224, 237, 160, 189, 237, 184, 142];
         let control = "😎".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
+        assert_eq!(control, RawInput.read_string(&mut rdr).unwrap());
 
         let data: Vec<u8> = vec![227,60,101,204,129,226,157,164,239,184,143,195,159,226,132,157,230,157,177,228,186,172,230,157,177,228,186,172,237,160,189,237,184,137,32,237,160,189,237,184,142,32,237,160,190,237,180,148,32,237,160,189,237,184,144,32,237,160,189,237,185,132];
         let control = "é❤️ßℝ東京東京😉 😎 🤔 😐 🙄".to_string();
         let mut rdr = ByteReader::from_vec(&data);
-        assert_eq!(Ok(control), RawInput.read_string(&mut rdr));
+        assert_eq!(control, RawInput.read_string(&mut rdr).unwrap());
     }
 }
 
