@@ -30,7 +30,7 @@ fn de_test(){
     let value = true;
     &value.serialize(&mut fw).unwrap();
     let mut rdr = Deserializer::from_vec(fw.get_ref());
-    assert_eq!(Ok(value), bool::deserialize(&mut rdr));
+    assert_eq!(value, bool::deserialize(&mut rdr).unwrap());
 
     /////////////////////////////////////////////////////////////
 
@@ -38,7 +38,7 @@ fn de_test(){
     let value = ();
     &value.serialize(&mut fw).unwrap();
     let mut rdr = Deserializer::from_vec(fw.get_ref());
-    assert_eq!(Ok(value), <()>::deserialize(&mut rdr));
+    assert_eq!(value, <()>::deserialize(&mut rdr).unwrap());
 
     // (api/write [nil nil nil])
     let value: Vec<u8> = vec![231,247,247,247];

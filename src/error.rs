@@ -205,13 +205,10 @@ impl de::Error for Error {
 
 impl std::error::Error for Error {
     fn description(&self) -> &str {
-        let err = *self.err;
-        let code = err.code;
-        match code {
-            ErrorCode::Message(ref msg) => msg,
-            ErrorCode::Eof => "unexpected end of input",
-            /////////////////////////////////////////////////////////////////////////
-            _ => unimplemented!(),
+        match self.err.code {
+            ErrorCode::Io(ref err) => std::error::Error::description(err),
+            // should use Display::fmt or to_string().
+            _ => "fressian error!",
         }
     }
 }

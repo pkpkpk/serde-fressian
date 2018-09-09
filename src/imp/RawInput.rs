@@ -10,7 +10,7 @@ use std::convert::TryFrom;
 #[derive(Clone, Debug)]
 pub struct RawInput;
 
-fn error<'a, T>(rdr: &'a mut ByteReader, reason: ErrorCode) -> Result<T> {
+fn error<T>(rdr: &ByteReader, reason: ErrorCode) -> Result<T> {
     let position: usize = rdr.get_bytes_read();
     Err(Error::syntax(reason, position))
 }
@@ -276,13 +276,14 @@ impl<'a> RawInput {
         if length == 0 {
             Ok("".to_string())
         } else {
+            let bytes_read = reader.get_bytes_read();
             let bytes = self.read_raw_bytes(reader, length)?;
             let length = bytes.len();
             let mut buf: Vec<u16> = Vec::with_capacity(length); //prob min ascii is good guess?
             let mut pos = 0;
-            let mut res: Result<()> = Ok(());
+            // let mut res: Result<()> = Ok(());
 
-            while pos < length && res.is_ok() {
+            while pos < length  { //&& res.is_ok()
                 let ch = bytes[pos] & 0xff;
                 pos += 1;
                 match ch >> 4 {
@@ -305,21 +306,14 @@ impl<'a> RawInput {
                         buf.push(n as u16)
                     }
                     _ => {
-                        res = error(reader, ErrorCode::InvalidUTF8)
+                        return Err(Error::syntax(ErrorCode::InvalidUTF8, length + bytes_read))
                     }
                 }
             };
 
-            res.and({
-                let s = String::from_utf16(buf.as_slice());
-                if s.is_ok(){
-                    Ok(s.unwrap())
-                } else {
-                    error(reader, ErrorCode::InvalidUTF8)
-                }
-            })
+            String::from_utf16(buf.as_slice())
+              .or(Err(Error::syntax(ErrorCode::InvalidUTF8, length + bytes_read)))
         }
-
     }
 
     pub fn read_string(&mut self, rdr: &'a mut ByteReader) -> Result<String> {
