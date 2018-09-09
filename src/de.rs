@@ -4,7 +4,7 @@ use serde::de::{
 };
 
 use imp::io::{ByteReader};
-use error::{Error, Result};
+use error::{Error, ErrorCode, Result};
 use imp::RawInput::{RawInput};
 use imp::codes;
 use value::{self, Value};
@@ -15,6 +15,12 @@ pub struct Deserializer<'de>{
     rawIn: RawInput,
     cache_next: bool,
     priority_cache: Vec<Value>
+}
+
+fn error<T>(de: &Deserializer, reason: ErrorCode) -> Result<T>
+{
+    let position: usize = de.rdr.get_bytes_read();
+    Err(Error::syntax(reason, position))
 }
 
 impl<'de> Deserializer<'de>
@@ -79,7 +85,7 @@ where
     let mut bytes = Vec::new();
     match rdr.read_to_end(&mut bytes){
         Ok(_) => from_bytes(&bytes),
-        Err(_) => Err(Error::Message("io::rdr read_to_end failure".to_string())) //forward e
+        Err(e) => Err(Error::io(e))
     }
 }
 
@@ -192,9 +198,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                         visitor.visit_map(ClosedListReader::new(self))
                     }
 
-                    _ => {
-                        Err(Error::Message("malformed LIST body of MAP".to_string()))
-                    }
+                    _ => error(self, ErrorCode::MapExpectedListCode)
+
                 }
             }
 
@@ -250,15 +255,15 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                         Value::STRING(s) => {
                             visitor.visit_string(s.clone())
                         }
-                        _ => Err(Error::Message("unsupported cached Value type".to_string())) //need value formatting
+                        _ => Err(Error::msg("unsupported cached Value type".to_string())) //need value formatting
                     }
                 } else {
-                    Err(Error::Message("missing cached object".to_string()))
+                    Err(Error::msg("missing cached object".to_string()))
                 }
             }
 
 
-            _ => Err(Error::UnmatchedCode(code as u8)),
+            _ => error(self, ErrorCode::UnmatchedCode(code as u8)),
         }
     }
 
@@ -290,12 +295,11 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     {
         match name {
             "CODE" => {
+                // this exists for deserialize Value lookahead
                 //this will choke on cache codes, need to peek until next value code ///////////////////////////////
                 visitor.visit_i8(self.peek_next_code()?)
             }
-            _ => {
-                Err(Error::Syntax)
-            }
+            _ => error(self, ErrorCode::UnsupportedNamedType(name.to_string()))//////////////////////
         }
     }
 
@@ -332,9 +336,7 @@ fn visit_list<'a, 'de, V>(de: &'a mut Deserializer<'de>, visitor: V) -> Result<V
             visitor.visit_seq(ClosedListReader::new(de))
         }
 
-        _ => {
-            Err(Error::Message("unrecognized list code".to_string()))
-        }
+        _ => error(de, ErrorCode::ExpectedListCode)
     }
 }
 
@@ -408,9 +410,8 @@ impl<'de, 'a> MapAccess<'de> for FixedListReader<'a, 'de> {
             Ok(Some(v)) => {
                 Ok(v)
             }
-            Ok(None) => {
-                Err(Error::Message("premature EOF when trying to deserialize map value".to_string()))
-            }
+            Ok(None) => error(self.de, ErrorCode::UnexpectedEof),
+
             Err(err) => {
                 Err(err)
             }
@@ -439,7 +440,7 @@ impl<'de, 'a> SeqAccess<'de> for ClosedListReader<'a, 'de> {
         T: DeserializeSeed<'de>,
     {
         if self.finished {
-            Err(Error::Message("attempted reading past list end".to_string()))
+            error(self.de, ErrorCode::AttemptToReadPastEnd)
         } else if self.de.peek_next_code()? as u8 == codes::END_COLLECTION{
             self.finished = true;
             let _ = self.de.read_next_code()?;
@@ -468,9 +469,8 @@ impl<'de, 'a> MapAccess<'de> for ClosedListReader<'a, 'de> {
             Ok(Some(v)) => {
                 Ok(v)
             }
-            Ok(None) => {
-                Err(Error::Message("premature EOF when trying to deserialize map value".to_string()))
-            }
+            Ok(None) => error(self.de, ErrorCode::UnexpectedEof),
+
             Err(err) => {
                 Err(err)
             }
@@ -499,27 +499,48 @@ impl<'de, 'a> SeqAccess<'de> for OpenListReader<'a, 'de> {
         T: DeserializeSeed<'de>,
     {
         if self.finished {
-            return Err(Error::Message("attempted reading past list end".to_string()))
+            return error(self.de, ErrorCode::AttemptToReadPastEnd)
         };
 
-        match self.de.peek_next_code() {
-            Ok(code) => {
-                if code as u8 == codes::END_COLLECTION {
-                    self.finished = true;
-                    let _ = self.de.read_next_code()?;
-                    Ok(None)
-                } else {
-                    seed.deserialize(&mut *self.de).map(Some)
-                }
+        let next_code = self.de.peek_next_code();
+
+        if next_code.is_ok() {
+            let code = next_code.unwrap();
+            if code as u8 == codes::END_COLLECTION {
+                self.finished = true;
+                let _ = self.de.read_next_code()?;
+                Ok(None)
+            } else {
+                seed.deserialize(&mut *self.de).map(Some)
             }
-            Err(Error::Eof) => {
+        } else {
+            let err = next_code.unwrap_err();
+            if err.is_eof() {
                 self.finished = true;
                 Ok(None)
-            }
-            Err(err) => {
+            } else {
                 Err(err)
             }
         }
+
+        // match self.de.peek_next_code() {
+        //     Ok(code) => {
+        //         if code as u8 == codes::END_COLLECTION {
+        //             self.finished = true;
+        //             let _ = self.de.read_next_code()?;
+        //             Ok(None)
+        //         } else {
+        //             seed.deserialize(&mut *self.de).map(Some)
+        //         }
+        //     }
+        //     Err(Error::Eof) => {
+        //         self.finished = true;
+        //         Ok(None)
+        //     }
+        //     Err(err) => {
+        //         Err(err)
+        //     }
+        // }
     }
 }
 

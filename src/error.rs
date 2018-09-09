@@ -35,6 +35,7 @@ pub enum ErrorCode{
     /// Some IO error occurred while serializing or deserializing.
     Io(io::Error),
     UnsupportedType,
+    UnsupportedNamedType(String),
     Eof,
     Syntax,
     Expectedi64,
@@ -47,6 +48,10 @@ pub enum ErrorCode{
     ExpectedStringCode,
     ExpectedNonZeroReadLength,
     IntTooLargeFori64,
+    MapExpectedListCode,
+    ExpectedListCode,
+    UnexpectedEof,
+    AttemptToReadPastEnd,
 }
 
 // #[derive(Debug, PartialEq)]
@@ -59,7 +64,24 @@ struct ErrorImpl {
 }
 
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum Category {
+    Io, /// The error was caused by a failure to read or write bytes on an IO stream.
+    Syntax, /// The error was caused by input that was not syntactically valid JSON.
+    Eof,
+}
+
 impl Error {
+    pub fn is_eof(&self) -> bool { self.classify() == Category::Eof }
+
+    pub fn classify(&self) -> Category {
+        match self.err.code{
+            ErrorCode::Eof => Category::Eof,
+            /////////////////////////
+            _ => Category::Syntax
+        }
+    }
+
     pub fn msg(msg: String) -> Self {
         Error {
             err: Box::new(ErrorImpl {
