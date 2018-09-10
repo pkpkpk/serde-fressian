@@ -12,17 +12,13 @@ pub struct Error {
     pub err: Box<ErrorImpl>,
 }
 
-// #[derive(Debug, PartialEq)]
 pub enum ErrorCode {
-    // Msg(Box<str>),
+    Io(io::Error),
     Message(String),
     UnmatchedCode(u8),
-    /// Some IO error occurred while serializing or deserializing.
-    Io(io::Error),
-    UnsupportedType,
     UnsupportedNamedType(String),
+    UnsupportedType,
     Eof,
-    Syntax,
     Expectedi64,
     ExpectedDoubleCode,
     ExpectedFloatCode,
@@ -39,7 +35,6 @@ pub enum ErrorCode {
     AttemptToReadPastEnd,
 }
 
-// #[derive(Debug)]
 pub struct ErrorImpl {
     pub code: ErrorCode,
     pub position: usize,
@@ -47,9 +42,9 @@ pub struct ErrorImpl {
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize)]
 pub enum Category {
-    Io, /// The error was caused by a failure to read or write bytes on an IO stream.
-    Syntax, /// The error was caused by input that was not syntactically valid JSON.
+    Io,
     Eof,
+    Syntax,
 }
 
 impl ErrorImpl{
@@ -67,29 +62,50 @@ impl Serialize for ErrorImpl {
     where
         S: Serializer,
     {
-        // identity as serde error
+
         // would be nice to distinguish writing from reading errors rather
-        // than generic position property,
         // write position is not very useful
-        let mut map_state = serializer.serialize_map(Some(3))?;
+        let mut map_state = serializer.serialize_map(None)?;
 
+        map_state.serialize_key("type")?;
+        map_state.serialize_value("serde-fressian")?;
 
-        map_state.serialize_key("Category")?;
+        map_state.serialize_key("category")?;
         map_state.serialize_value(&self.classify())?;
-
-        // map_state.serialize_key("ErrorCode")?;
-        // // map_state.serialize_value(&self.code)?;
-        // match self.code {
-        //     ErrorCode::Io(_) => {
-        //         map_state.serialize_value("io-error")?;
-        //     },
-        //     _ => {
-        //         map_state.serialize_value(&self.code)?;
-        //     }
-        // }
 
         map_state.serialize_key("position")?;
         map_state.serialize_value(&self.position)?;
+
+        map_state.serialize_key("ErrorCode")?;
+        // map_state.serialize_value(&self.code)?;
+
+        match &self.code {
+            ErrorCode::Io(_) => {
+                map_state.serialize_value("IO::Error")?;
+            }
+            ErrorCode::Message(msg) => {
+                map_state.serialize_value("Message")?;
+                map_state.serialize_key("value")?;
+                map_state.serialize_value(&msg)?;
+            }
+            ErrorCode::UnmatchedCode(code) => {
+                map_state.serialize_value("UnmatchedCode")?;
+                map_state.serialize_key("value")?;
+                map_state.serialize_value(&code)?;
+            }
+            ErrorCode::UnsupportedNamedType(name) => {
+                map_state.serialize_value("UnsupportedNamedType")?;
+                map_state.serialize_key("value")?;
+                map_state.serialize_value(&name)?;
+                // serializer.serialize_newtype_variant("", 3, "UnsupportedNamedType", name)
+            }
+            _ => {
+                map_state.serialize_value(&self.code.to_string())?;
+                // serializer.serialize_unit_variant("",0, &self)
+                // serializer.serialize_str(&self.code.to_string())
+            }
+        }
+
         map_state.end()
     }
 }
@@ -152,24 +168,27 @@ impl Error {
 impl Display for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            // UnsupportedType,
             // Eof,
-            // Syntax,
-            // Expectedi64,
-            // ExpectedDoubleCode,
-            // ExpectedFloatCode,
-            // ExpectedBooleanCode,
-            // ExpectedChunkBytesConclusion,
-            // ExpectedBytesCode,
-            // InvalidUTF8,
-            // ExpectedStringCode,
-            // ExpectedNonZeroReadLength,
-            // IntTooLargeFori64,
             ErrorCode::Message(ref msg) => f.write_str(msg),
             ErrorCode::Io(ref err) => Display::fmt(err, f),
             ErrorCode::UnmatchedCode(code) => f.write_str(format!("unmatched code: {}", code).as_ref()),
-            // ErrorCode::InvalidNumber => f.write_str("invalid number"),
-            _ => f.write_str("need to finished Display for ErrorCode: ")
+            ErrorCode::UnsupportedNamedType(ref name) => f.write_str(format!("unsupported Named type : {}", name).as_ref()),
+            ErrorCode::UnsupportedType => f.write_str("UnsupportedType"),
+            ErrorCode::AttemptToReadPastEnd => f.write_str("attempted to read past end!"),
+            ErrorCode::UnexpectedEof => f.write_str("unexpected EOF"),
+            ErrorCode::ExpectedListCode => f.write_str("deserializing seq, expected list code"),
+            ErrorCode::MapExpectedListCode => f.write_str("deserializing map, expected list code"),
+            ErrorCode::IntTooLargeFori64 => f.write_str("int cannot fit inside signed i64"),
+            ErrorCode::Expectedi64 => f.write_str("expected i64"),
+            ErrorCode::ExpectedDoubleCode => f.write_str("expected double code"),
+            ErrorCode::ExpectedFloatCode => f.write_str("expected float code"),
+            ErrorCode::ExpectedBooleanCode => f.write_str("expected boolean code"),
+            ErrorCode::ExpectedChunkBytesConclusion => f.write_str("expected bytes conclusion (following chunks)"),
+            ErrorCode::ExpectedBytesCode => f.write_str("expected bytes code"),
+            ErrorCode::InvalidUTF8 => f.write_str("deserialized invalid utf8"),
+            ErrorCode::ExpectedStringCode => f.write_str("expected string code"),
+            ErrorCode::ExpectedNonZeroReadLength => f.write_str("expected non-zero read length"),
+            _ => f.write_str(self.to_string().as_ref())
         }
     }
 }
@@ -195,14 +214,12 @@ impl Display for ErrorImpl {
     }
 }
 
-// Remove two layers of verbosity from the debug representation. Humans often
-// end up seeing this representation because it is what unwrap() shows.
 impl Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "Error({:?}, byte-position: {})",
-            self.err.code.to_string(),
+            self.err.code.to_string(), // is what unwrap() shows.
             self.err.position
         )
     }
