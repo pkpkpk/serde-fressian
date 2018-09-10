@@ -13,24 +13,27 @@ pub struct Error {
 }
 
 pub enum ErrorCode {
-    Io(io::Error),
     Message(String),
-    UnmatchedCode(u8),
-    UnsupportedNamedType(String),
-    UnsupportedType,
+    Io(io::Error),
     Eof,
-    Expectedi64,
+    //// serialization errors
+    UnsupportedType,
+    Unsupported_TA_Type,
+    Unsupported_Cache_Type, //temporary
+    IntTooLargeFori64,
+    //// deserialization errors
+    UnmatchedCode(u8),
+    Expectedi64, //rawinput read_int got bad int
+    ExpectedNonZeroReadLength, //gave length 0 to ByteReader::read_bytes
     ExpectedDoubleCode,
     ExpectedFloatCode,
     ExpectedBooleanCode,
     ExpectedChunkBytesConclusion,
     ExpectedBytesCode,
-    InvalidUTF8,
     ExpectedStringCode,
-    ExpectedNonZeroReadLength,
-    IntTooLargeFori64,
     MapExpectedListCode,
     ExpectedListCode,
+    InvalidUTF8,
     UnexpectedEof,
     AttemptToReadPastEnd,
 }
@@ -44,15 +47,17 @@ pub struct ErrorImpl {
 pub enum Category {
     Io,
     Eof,
-    Syntax,
+    Msg,
+    De,
+    Ser
 }
 
 impl ErrorImpl{
     pub fn classify(&self) -> Category {
-        match self.code{
+        match self.code {
             ErrorCode::Eof => Category::Eof,
             /////////////////////////
-            _ => Category::Syntax
+            _ => Category::De
         }
     }
 }
@@ -92,12 +97,6 @@ impl Serialize for ErrorImpl {
                 map_state.serialize_value("UnmatchedCode")?;
                 map_state.serialize_key("value")?;
                 map_state.serialize_value(&code)?;
-            }
-            ErrorCode::UnsupportedNamedType(name) => {
-                map_state.serialize_value("UnsupportedNamedType")?;
-                map_state.serialize_key("value")?;
-                map_state.serialize_value(&name)?;
-                // serializer.serialize_newtype_variant("", 3, "UnsupportedNamedType", name)
             }
             _ => {
                 map_state.serialize_value(&self.code.to_string())?;
@@ -172,8 +171,8 @@ impl Display for ErrorCode {
             ErrorCode::Message(ref msg) => f.write_str(msg),
             ErrorCode::Io(ref err) => Display::fmt(err, f),
             ErrorCode::UnmatchedCode(code) => f.write_str(format!("unmatched code: {}", code).as_ref()),
-            ErrorCode::UnsupportedNamedType(ref name) => f.write_str(format!("unsupported Named type : {}", name).as_ref()),
-            ErrorCode::UnsupportedType => f.write_str("UnsupportedType"),
+            ErrorCode::Unsupported_TA_Type => f.write_str("Unsupported TypedArray Ser type"),
+            ErrorCode::Unsupported_Cache_Type => f.write_str("Unsupported Cache type"),
             ErrorCode::AttemptToReadPastEnd => f.write_str("attempted to read past end!"),
             ErrorCode::UnexpectedEof => f.write_str("unexpected EOF"),
             ErrorCode::ExpectedListCode => f.write_str("deserializing seq, expected list code"),
