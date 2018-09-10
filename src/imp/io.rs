@@ -128,9 +128,14 @@ impl ByteWriter<Vec<u8>> {
          }
     }
 
-    /// returning the underlying bytevec, including any bytes past bytes_written
-    /// shrink and return?
-    pub fn into_inner(self) -> Vec<u8> { self.out }
+    /// returning the underlying bytevec. Does not affect vector capacity
+    pub fn into_inner(mut self) -> Vec<u8> {
+        if self.bytes_written < self.out.len() {
+            &mut self.out.truncate(self.bytes_written);
+        }
+        assert!(self.out.len() == self.bytes_written);
+        self.out
+    }
 
     /// Gets a reference to the underlying value
     pub fn get_ref(&self) -> &Vec<u8> { &self.out }
@@ -260,5 +265,12 @@ mod test {
         assert_eq!(&wrt.to_vec(), &vec![]);
         wrt.write_bytes(v.as_slice(), 2, 3).unwrap();
         assert_eq!(&wrt.to_vec(), &vec![253, 0, 1]);
+    }
+
+    #[test]
+    fn into_inner_test(){
+        let data: Vec<u8> = vec![0, 1, 2, 3, 4];
+        let mut wrt = ByteWriter::from_vec(data);
+        assert_eq!(wrt.into_inner(), vec![]);
     }
 }

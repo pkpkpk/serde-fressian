@@ -49,9 +49,12 @@ impl Serializer<ByteWriter<Vec<u8>>> {
         self.writer.to_vec()
     }
 
+    pub fn into_inner(mut self) -> Vec<u8> {
+        self.writer.into_inner()
+    }
 }
 
-// write a value to bytes, skipping writer creation
+/// write to vec<u8>
 pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
@@ -60,10 +63,10 @@ where
     let mut serializer = Serializer::from_vec(buf);
 
     value.serialize(&mut serializer)?;
-    Ok(serializer.to_vec())
+    Ok(serializer.into_inner())
 }
 
-//write to vec<u8> with footer
+/// write to vec<u8> with footer
 pub fn to_vec_footer<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
@@ -72,7 +75,7 @@ where
     let mut serializer = Serializer::from_vec(buf);
     value.serialize(&mut serializer)?;
     serializer.write_footer()?;
-    Ok(serializer.to_vec())
+    Ok(serializer.into_inner())
 }
 
 impl<W> Serializer<W>
