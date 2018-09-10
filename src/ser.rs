@@ -373,10 +373,12 @@ where
         match _len {
             Some(n) => {
                 self.write_list_header(n)?;
-                Ok(Compound::LIST{ser: self, cache_elements: false})
+                Ok(Compound::LIST{ser: self, cache_elements: false, list_type: ListType::Fixed})
             }
-            // might be able to swing this with .end_list() method on an open-list compound variant////
-            None => error(self, ErrorCode::UnsupportedType)
+            None => {
+                self.begin_closed_list()?;
+                Ok(Compound::LIST{ser: self, cache_elements: false, list_type: ListType::Closed})
+            }
         }
     }
 
@@ -386,10 +388,13 @@ where
                 let length = 2 * l;
                 self.write_code(codes::MAP)?;
                 self.write_list_header(length)?;
-                Ok(Compound::MAP{ser: self})
+                Ok(Compound::MAP{ser: self, list_type: ListType::Fixed})
             }
-            // might be able to swing this with .end_list() method on an open-list compound variant////
-            None => error(self, ErrorCode::UnsupportedType)
+            None => {
+                self.write_code(codes::MAP)?;
+                self.begin_closed_list()?;
+                Ok(Compound::MAP{ser: self, list_type: ListType::Closed})
+            }
         }
     }
 
@@ -397,21 +402,19 @@ where
         self.serialize_map(Some(len))
     }
 
-    // Tuples look just like sequences in JSON.
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
         self.serialize_seq(Some(len))
     }
 
-    // Tuple structs look just like sequences in JSON.
     fn serialize_tuple_struct(self,_name: &'static str, len: usize,) -> Result<Self::SerializeTupleStruct> {
         match _name {
             "SYM" => {
                 self.write_code(codes::SYM)?;
-                Ok(Compound::LIST{ser: self, cache_elements: true})
+                Ok(Compound::LIST{ser: self, cache_elements: true, list_type: ListType::Fixed})
             }
             "KEY" => {
                 self.write_code(codes::KEY)?;
-                Ok(Compound::LIST{ser: self, cache_elements: true})
+                Ok(Compound::LIST{ser: self, cache_elements: true, list_type: ListType::Fixed})
             }
             _ => self.serialize_seq(Some(len))
         }
@@ -421,16 +424,10 @@ where
     ///////////////////////////////////////////////////////////////////////
     // enums //////////////////////////////////////////////////////////////
 
-    // keyword?
     fn serialize_unit_variant(self,_name: &'static str,_variant_index: u32,variant: &'static str) -> Result<()> {
         self.serialize_str(variant)
     }
 
-    // Note that newtype variant (and all of the other variant serialization
-    // methods) refer exclusively to the "externally tagged" enum
-    // representation.
-    //
-    // Serialize this to JSON in externally tagged form as `{ NAME: VALUE }`.
     fn serialize_newtype_variant<T>(
         self,
         _name: &'static str,
@@ -445,8 +442,6 @@ where
         value.serialize(&mut *self)
     }
 
-    // Struct variants are represented in JSON as `{ NAME: { K: V, ... } }`.
-    // This is the externally tagged representation.
     fn serialize_struct_variant(
         self,
         _name: &'static str,
@@ -455,11 +450,9 @@ where
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         variant.serialize(&mut *self)?;
-        Ok(Compound::LIST{ser: self, cache_elements: false})
+        Ok(Compound::LIST{ser: self, cache_elements: false, list_type: ListType::Fixed})
     }
 
-    // Tuple variants are represented in JSON as `{ NAME: [DATA...] }`. Again
-    // this method is only responsible for the externally tagged representation.
     fn serialize_tuple_variant(
         self,
         _name: &'static str,
@@ -468,20 +461,27 @@ where
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
         variant.serialize(&mut *self)?;
-        Ok(Compound::LIST{ser: self, cache_elements: false})
+        Ok(Compound::LIST{ser: self, cache_elements: false, list_type: ListType::Fixed})
     }
 
 }
 
-
+pub enum ListType {
+    Fixed,
+    Closed,
+    Open
+}
 
 pub enum Compound<'a, W: 'a> {
     LIST {
         ser: &'a mut Serializer<W>,
-        cache_elements: bool
+        cache_elements: bool,
+        list_type: ListType
     },
     MAP {
-        ser: &'a mut Serializer<W>
+        ser: &'a mut Serializer<W>,
+        // cache_keys: bool,
+        list_type: ListType
     }
 }
 
@@ -495,12 +495,8 @@ where
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        // value.serialize(&mut *self.ser)
         match *self {
-            Compound::LIST {
-                ref mut ser,
-                cache_elements,
-            } => {
+            Compound::LIST { ref mut ser, cache_elements, ..} => {
                 if cache_elements {
                     value.serialize(CachingSerializer{ser: ser})
                 } else {
@@ -508,14 +504,28 @@ where
                 }
             }
 
-            Compound::MAP {ref mut ser} => {
+            Compound::MAP {ref mut ser, ..} => {
                 value.serialize(&mut **ser)
             }
         }
-
     }
 
-    fn end(self) -> Result<()> { Ok(()) }
+    fn end(self) -> Result<()> {
+        match self {
+            Compound::LIST{ser, list_type, ..} => {
+                match list_type {
+                    ListType::Fixed => Ok(()),
+                    _ => ser.end_list()
+                }
+            }
+            Compound::MAP{ser, list_type} => {
+                match list_type {
+                    ListType::Fixed => Ok(()),
+                    _ => ser.end_list()
+                }
+            }
+        }
+    }
 }
 
 impl<'a,W> ser::SerializeTuple for Compound<'a,W>
@@ -566,8 +576,6 @@ where
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-
-// missing optional `serialize_entry` method allows serializers to optimize for the case where kv both available
 impl<'a,W> ser::SerializeMap for Compound<'a,W>
 where
     W: IWriteBytes,
@@ -575,25 +583,21 @@ where
     type Ok = ();
     type Error = Error;
 
-    // The Serde data model allows map keys to be any serializable type.
     fn serialize_key<T>(&mut self, key: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        // key.serialize(&mut *self.ser)
         ser::SerializeSeq::serialize_element(self, key)
     }
 
     fn serialize_value<T>(&mut self, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        // value.serialize(&mut *self.ser)
         ser::SerializeSeq::serialize_element(self, value)
     }
 
-    fn end(self) -> Result<()> { Ok(()) }
+    fn end(self) -> Result<()> { ser::SerializeSeq::end(self) }
 }
 
-// Structs are like maps in which the keys are constrained to be compile-time constant strings
 impl<'a,W> ser::SerializeStruct for Compound<'a,W>
 where
     W: IWriteBytes,
@@ -604,13 +608,11 @@ where
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        // key.serialize(&mut *self.ser)?;
-        // value.serialize(&mut *self.ser)
         ser::SerializeSeq::serialize_element(self, key)?;
         ser::SerializeSeq::serialize_element(self, value)
     }
 
-    fn end(self) -> Result<()> { Ok(()) }
+    fn end(self) -> Result<()> { ser::SerializeSeq::end(self) }
 }
 
 impl<'a,W> ser::SerializeStructVariant for Compound<'a,W>
@@ -623,13 +625,11 @@ where
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where T: ?Sized + Serialize,
     {
-        // key.serialize(&mut *self.ser)?;
-        // value.serialize(&mut *self.ser)
         ser::SerializeSeq::serialize_element(self, key)?;
         ser::SerializeSeq::serialize_element(self, value)
     }
 
-    fn end(self) -> Result<()> { Ok(()) }
+    fn end(self) -> Result<()> { ser::SerializeSeq::end(self) }
 }
 
 

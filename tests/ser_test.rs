@@ -3,6 +3,7 @@
 #![allow(non_snake_case)]
 #![feature(custom_attribute)]
 
+#[macro_use] extern crate maplit;
 
 #[macro_use]
 extern crate serde_derive;
@@ -16,7 +17,8 @@ extern crate regex;
 
 use std::collections::{HashMap, HashSet};
 use serde::de::{Deserialize};
-use serde::Serialize;
+use serde::ser::{Serialize, SerializeMap};
+
 
 use serde_fressian::ser::{self, Serializer};
 use serde_fressian::de::{self, Deserializer, from_vec};
@@ -486,4 +488,51 @@ fn write_string_test(){
     assert_eq!(&fw.to_vec(), &control);
 
     // missing chunked
+}
+
+
+struct ClosedListMap {
+    a: usize,
+    b: usize,
+    c: usize,
+}
+
+impl Serialize for ClosedListMap {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut map_state = serializer.serialize_map(None)?;
+
+        map_state.serialize_key("a")?;
+        map_state.serialize_value(&0)?;
+        map_state.serialize_key("b")?;
+        map_state.serialize_value(&1)?;
+        map_state.serialize_key("c")?;
+        map_state.serialize_value(&2)?;
+        map_state.serialize_key("d")?;
+        map_state.serialize_value(&3)?;
+        map_state.end()
+    }
+}
+
+#[test]
+fn closed_list_map_test(){
+
+    // (notebook.rust.fress/write-as-closed {"a" 0 "b" 1 "c" 2 "d" 3})
+    let control_bytes: Vec<u8> = vec![192,237,219,97,0,219,98,1,219,99,2,219,100,3,253];
+    let control_val: HashMap<String,u8>= hashmap!{ "a".to_string() => 0,
+                                                   "b".to_string() => 1,
+                                                   "c".to_string() => 2,
+                                                   "d".to_string() => 3};
+
+    let de_test_val: HashMap<String,u8> = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_val, de_test_val);
+
+
+    let ser_val = ClosedListMap{ a: 0, b: 1, c: 2}; //expect extra entry!
+    let test_bytes: Vec<u8> = ser::to_vec(&ser_val).unwrap();
+
+    let test_val: HashMap<String,u8> = de::from_vec(&test_bytes).unwrap();
+    assert_eq!(control_val, test_val)
 }
