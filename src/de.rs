@@ -64,8 +64,6 @@ where
 {
     let mut deserializer = Deserializer::from_bytes(s);
     T::deserialize(&mut deserializer)
-    // deserializer.end()
-    // Ok(t)
 }
 
 pub fn from_vec<'a, T>(v: &'a Vec<u8>) -> Result<T>
@@ -122,9 +120,9 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_bytes(self.rawIn.read_bytes_code(&mut self.rdr, code)?)
             }
 
-            // codes::BYTES_CHUNK => {///////////////////////////////////////////////////////////////
-            //     self.internal_read_chunked_bytes()
-            // }
+            codes::BYTES_CHUNK => {
+                error(self, ErrorCode::UnsupportedType) ///////////////////////////////////////////
+            }
 
             codes::STRING_PACKED_LENGTH_START..=225 => {
                 let length = code as u8 - codes::STRING_PACKED_LENGTH_START;
@@ -150,16 +148,14 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_string(string)
             }
 
-            // codes::STRING_CHUNK => {///////////////////////////////////////////////////////////////
-            //
-            // }
+            codes::STRING_CHUNK => {
+                error(self, ErrorCode::UnsupportedType)////////////////////////////////////////////
+            }
 
             codes::UTF8 => {
                 let length = self.rawIn.read_count(&mut self.rdr)?;
                 visitor.visit_str(self.rawIn.read_raw_utf8(&mut self.rdr, length as usize)?)
             }
-
-            //////////////////////////////////////////////////////////////////////
 
             codes::LIST_PACKED_LENGTH_START..=235 => {
                 let length = code as u8 - codes::LIST_PACKED_LENGTH_START;
@@ -178,8 +174,6 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             codes::BEGIN_OPEN_LIST => {
                 visitor.visit_seq(OpenListReader::new(self))
             }
-
-            //////////////////////////////////////////////////////////////////////
 
             codes::MAP => {
                 let list_code = self.read_next_code()?;
@@ -207,10 +201,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visit_list(self, visitor)
             }
 
-            //////////////////////////////////////////////////////////////////////
-
             codes::INST => {
-                visitor.visit_i64(self.rawIn.read_int(&mut self.rdr)?) //millisecs
+                visitor.visit_i64(self.rawIn.read_int(&mut self.rdr)?)
             }
 
             codes::UUID => {
@@ -236,8 +228,15 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 visitor.visit_seq(FixedListReader::new(self, 2)) //////////////
             }
 
-            codes::INT_ARRAY | codes::LONG_ARRAY | codes::FLOAT_ARRAY
-            | codes::DOUBLE_ARRAY | codes::BOOLEAN_ARRAY | codes::OBJECT_ARRAY
+            codes::OBJECT_ARRAY => {
+                error(self, ErrorCode::UnsupportedType) //// discard?
+            }
+
+            codes::INT_ARRAY
+            | codes::LONG_ARRAY
+            | codes::FLOAT_ARRAY
+            | codes::DOUBLE_ARRAY
+            | codes::BOOLEAN_ARRAY
             => {
                 let length = self.rawIn.read_count(&mut self.rdr)?;
                 visitor.visit_seq(FixedListReader::new(self, length as usize))
@@ -299,7 +298,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 //this will choke on cache codes, need to peek until next value code ///////////////////////////////
                 visitor.visit_i8(self.peek_next_code()?)
             }
-            _ => error(self, ErrorCode::UnsupportedNamedType(name.to_string()))//////////////////////
+            _ => self.deserialize_seq(visitor)
         }
     }
 
@@ -336,6 +335,10 @@ fn visit_list<'a, 'de, V>(de: &'a mut Deserializer<'de>, visitor: V) -> Result<V
             visitor.visit_seq(ClosedListReader::new(de))
         }
 
+        codes::BEGIN_OPEN_LIST => {
+            visitor.visit_seq(OpenListReader::new(de))
+        }
+
         _ => error(de, ErrorCode::ExpectedListCode)
     }
 }
@@ -345,7 +348,6 @@ struct FixedListReader<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
     length: usize,
     items_read: usize,
-    nullable: bool //remove
 }
 
 impl<'a, 'de> FixedListReader<'a, 'de> {
@@ -354,16 +356,6 @@ impl<'a, 'de> FixedListReader<'a, 'de> {
             de,
             length: length,
             items_read: 0,
-            nullable: false
-        }
-    }
-
-    fn new_nullable(de: &'a mut Deserializer<'de>, length: usize) -> Self {
-        FixedListReader {
-            de,
-            length: length,
-            items_read: 0,
-            nullable: true
         }
     }
 
@@ -522,25 +514,6 @@ impl<'de, 'a> SeqAccess<'de> for OpenListReader<'a, 'de> {
                 Err(err)
             }
         }
-
-        // match self.de.peek_next_code() {
-        //     Ok(code) => {
-        //         if code as u8 == codes::END_COLLECTION {
-        //             self.finished = true;
-        //             let _ = self.de.read_next_code()?;
-        //             Ok(None)
-        //         } else {
-        //             seed.deserialize(&mut *self.de).map(Some)
-        //         }
-        //     }
-        //     Err(Error::Eof) => {
-        //         self.finished = true;
-        //         Ok(None)
-        //     }
-        //     Err(err) => {
-        //         Err(err)
-        //     }
-        // }
     }
 }
 
