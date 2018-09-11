@@ -49,7 +49,7 @@ impl Serializer<ByteWriter<Vec<u8>>> {
         self.writer.to_vec()
     }
 
-    pub fn into_inner(mut self) -> Vec<u8> {
+    pub fn into_inner(self) -> Vec<u8> {
         self.writer.into_inner()
     }
 }
@@ -433,7 +433,7 @@ where
 
     fn serialize_newtype_variant<T>(
         self,
-        _name: &'static str,
+        name: &'static str,
         _variant_index: u32,
         variant: &'static str,
         value: &T,
@@ -441,8 +441,14 @@ where
     where
         T: ?Sized + Serialize,
     {
-        variant.serialize(&mut *self)?;
-        value.serialize(&mut *self)
+        match name {
+            "Result" => value.serialize(self),
+            _ => {
+                self.write_list_header(2)?;
+                variant.serialize(&mut *self)?;
+                value.serialize(&mut *self)
+            }
+        }
     }
 
     fn serialize_struct_variant(
