@@ -13,11 +13,11 @@ pub struct Error {
 }
 
 pub enum ErrorCode {
-    Message(String),
-    Io(io::Error),
     Eof,
-    //// serialization errors
+    Io(io::Error),
+    Message(String),
     UnsupportedType,
+    //// serialization errors
     Unsupported_TA_Type,
     Unsupported_Cache_Type, //temporary
     IntTooLargeFori64,
@@ -47,16 +47,25 @@ pub struct ErrorImpl {
 pub enum Category {
     Io,
     Eof,
-    Msg,
     De,
-    Ser
+    Ser,
+    Misc
 }
 
 impl ErrorImpl{
     pub fn classify(&self) -> Category {
         match self.code {
             ErrorCode::Eof => Category::Eof,
-            /////////////////////////
+
+            ErrorCode::Io(_) => Category::Io,
+
+            ErrorCode::UnsupportedType
+            | ErrorCode::Message(_) => Category::Misc,
+
+            ErrorCode::Unsupported_TA_Type
+            | ErrorCode::Unsupported_Cache_Type
+            | ErrorCode::IntTooLargeFori64 => Category::Ser,
+
             _ => Category::De
         }
     }
@@ -100,17 +109,12 @@ impl Serialize for ErrorImpl {
             }
             _ => {
                 map_state.serialize_value(&self.code.to_string())?;
-                // serializer.serialize_unit_variant("",0, &self)
-                // serializer.serialize_str(&self.code.to_string())
             }
         }
 
         map_state.end()
     }
 }
-
-
-
 
 impl Error {
     pub fn is_eof(&self) -> bool { self.classify() == Category::Eof }
