@@ -18,8 +18,8 @@ pub enum ErrorCode {
     Message(String),
     UnsupportedType,
     //// serialization errors
-    Unsupported_TA_Type,
-    Unsupported_Cache_Type, //temporary
+    UnsupportedTAType,
+    UnsupportedCacheType, //temporary
     IntTooLargeFori64,
     //// deserialization errors
     UnmatchedCode(u8),
@@ -47,9 +47,9 @@ pub struct ErrorImpl {
 pub enum Category {
     Io,
     Eof,
-    De,
-    Ser,
-    Misc
+    de,
+    ser,
+    misc
 }
 
 impl ErrorImpl{
@@ -60,13 +60,13 @@ impl ErrorImpl{
             ErrorCode::Io(_) => Category::Io,
 
             ErrorCode::UnsupportedType
-            | ErrorCode::Message(_) => Category::Misc,
+            | ErrorCode::Message(_) => Category::misc,
 
-            ErrorCode::Unsupported_TA_Type
-            | ErrorCode::Unsupported_Cache_Type
-            | ErrorCode::IntTooLargeFori64 => Category::Ser,
+            ErrorCode::UnsupportedTAType
+            | ErrorCode::UnsupportedCacheType
+            | ErrorCode::IntTooLargeFori64 => Category::ser,
 
-            _ => Category::De
+            _ => Category::de
         }
     }
 }
@@ -130,10 +130,20 @@ impl Error {
         }
     }
 
+    //rename
     pub fn syntax(code: ErrorCode, position: usize) -> Self {
         Error {
             err: Box::new(ErrorImpl {
                 code: code,
+                position: position,
+            }),
+        }
+    }
+
+    pub fn unmatched_code(code: u8, position: usize) -> Self {
+        Error {
+            err: Box::new(ErrorImpl {
+                code: ErrorCode::UnmatchedCode(code),
                 position: position,
             }),
         }
@@ -171,27 +181,27 @@ impl Error {
 impl Display for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            // Eof,
+            ErrorCode::Eof => f.write_str("Eof"),
             ErrorCode::Message(ref msg) => f.write_str(msg),
             ErrorCode::Io(ref err) => Display::fmt(err, f),
-            ErrorCode::UnmatchedCode(code) => f.write_str(format!("unmatched code: {}", code).as_ref()),
-            ErrorCode::Unsupported_TA_Type => f.write_str("Unsupported TypedArray Ser type"),
-            ErrorCode::Unsupported_Cache_Type => f.write_str("Unsupported Cache type"),
-            ErrorCode::AttemptToReadPastEnd => f.write_str("attempted to read past end!"),
-            ErrorCode::UnexpectedEof => f.write_str("unexpected EOF"),
-            ErrorCode::ExpectedListCode => f.write_str("deserializing seq, expected list code"),
-            ErrorCode::MapExpectedListCode => f.write_str("deserializing map, expected list code"),
-            ErrorCode::IntTooLargeFori64 => f.write_str("int cannot fit inside signed i64"),
-            ErrorCode::Expectedi64 => f.write_str("expected i64"),
-            ErrorCode::ExpectedDoubleCode => f.write_str("expected double code"),
-            ErrorCode::ExpectedFloatCode => f.write_str("expected float code"),
-            ErrorCode::ExpectedBooleanCode => f.write_str("expected boolean code"),
-            ErrorCode::ExpectedChunkBytesConclusion => f.write_str("expected bytes conclusion (following chunks)"),
-            ErrorCode::ExpectedBytesCode => f.write_str("expected bytes code"),
-            ErrorCode::InvalidUTF8 => f.write_str("deserialized invalid utf8"),
-            ErrorCode::ExpectedStringCode => f.write_str("expected string code"),
-            ErrorCode::ExpectedNonZeroReadLength => f.write_str("expected non-zero read length"),
-            _ => f.write_str(self.to_string().as_ref())
+            ErrorCode::UnmatchedCode(code) => f.write_str("UnmatchedCode"),
+            ErrorCode::UnsupportedType => f.write_str("UnsupportedType"),
+            ErrorCode::UnsupportedTAType => f.write_str("UnsupportedTAType"),
+            ErrorCode::UnsupportedCacheType => f.write_str("UnsupportedCacheType"),
+            ErrorCode::AttemptToReadPastEnd => f.write_str("AttemptToReadPastEnd"),
+            ErrorCode::UnexpectedEof => f.write_str("UnexpectedEof"),
+            ErrorCode::ExpectedListCode => f.write_str("ExpectedListCode"),
+            ErrorCode::MapExpectedListCode => f.write_str("MapExpectedListCode"),
+            ErrorCode::IntTooLargeFori64 => f.write_str("IntTooLargeFori64"),
+            ErrorCode::Expectedi64 => f.write_str("Expectedi64"),
+            ErrorCode::ExpectedDoubleCode => f.write_str("ExpectedDoubleCode"),
+            ErrorCode::ExpectedFloatCode => f.write_str("ExpectedFloatCode"),
+            ErrorCode::ExpectedBooleanCode => f.write_str("ExpectedBooleanCode"),
+            ErrorCode::ExpectedChunkBytesConclusion => f.write_str("ExpectedChunkBytesConclusion"),
+            ErrorCode::ExpectedBytesCode => f.write_str("ExpectedBytesCode"),
+            ErrorCode::InvalidUTF8 => f.write_str("InvalidUTF8"),
+            ErrorCode::ExpectedStringCode => f.write_str("ExpectedStringCode"),
+            ErrorCode::ExpectedNonZeroReadLength => f.write_str("ExpectedNonZeroReadLength")
         }
     }
 }

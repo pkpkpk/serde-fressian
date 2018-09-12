@@ -689,7 +689,7 @@ where
                 Ok(TACompound{ser: self.ser})
             }
             // typed arrays must length. might be able to relax this see above
-            None => error(self.ser, ErrorCode::Unsupported_TA_Type)
+            None => error(self.ser, ErrorCode::UnsupportedTAType)
         }
     }
 
@@ -727,96 +727,96 @@ where
     type SerializeStructVariant = ser::Impossible<(), Error>;
 
     #[inline]
-    fn serialize_i8(self, _value: i8) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_i8(self, _value: i8) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
-    fn serialize_i16(self, _value: i16) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_i16(self, _value: i16) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
-    fn serialize_u8(self, _value: u8) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_u8(self, _value: u8) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
-    fn serialize_u16(self, _value: u16) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_u16(self, _value: u16) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
-    fn serialize_u32(self, _value: u32) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_u32(self, _value: u32) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
-    fn serialize_u64(self, _value: u64) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_u64(self, _value: u64) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
-    fn serialize_char(self, _value: char) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_char(self, _value: char) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
-    fn serialize_bytes(self, _data: &[u8]) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_bytes(self, _data: &[u8]) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
-    fn serialize_unit(self) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_unit(self) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> { error(self.ser, ErrorCode::Unsupported_TA_Type) }
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> { error(self.ser, ErrorCode::UnsupportedTAType) }
 
     #[inline]
     fn serialize_unit_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str) -> Result<()> {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_newtype_struct<T>(self, _name: &'static str, _value: &T) -> Result<()>
     where T: ?Sized + Serialize, {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_newtype_variant<T>(self,_name: &'static str,_variant_index: u32, _variant: &'static str, _value: &T,) -> Result<()>
     where T: ?Sized + Serialize, {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_none(self) -> Result<()> {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_some<S>(self, _value: &S) -> Result<()>
     where S: ?Sized + Serialize, {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_tuple_struct(self,_name: &'static str, _len: usize,) -> Result<Self::SerializeTupleStruct> {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_tuple_variant(self,_name: &'static str,_variant_index: u32, _variant: &'static str,_len: usize, ) -> Result<Self::SerializeTupleVariant> {
-         error(self.ser, ErrorCode::Unsupported_TA_Type)
+         error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_struct( self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_struct_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self::SerializeStructVariant> {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 
     #[inline]
     fn serialize_str(self, _value: &str) -> Result<()> {
-        error(self.ser, ErrorCode::Unsupported_TA_Type)
+        error(self.ser, ErrorCode::UnsupportedTAType)
     }
 }
 /////////////////////////////////////////////////////////////////////////////
@@ -928,12 +928,12 @@ where
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
         // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
         // self.ser.serialize_seq(_len)
-        error(self.ser, ErrorCode::Unsupported_Cache_Type)
+        error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     #[inline]
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        error(self.ser, ErrorCode::Unsupported_Cache_Type)
+        error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     #[inline]
@@ -941,7 +941,7 @@ where
     where T: ?Sized + Serialize, {
          // self.ser.write_code(codes::PUT_PRIORITY_CACHE)?;
          // self.ser.serialize_newtype_struct(_name, value)
-         error(self.ser, ErrorCode::Unsupported_Cache_Type)
+         error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -951,42 +951,42 @@ where
     #[inline]
     fn serialize_newtype_variant<T>(self,_name: &'static str, _variant_index: u32, _variant: &'static str, _value: &T,) -> Result<()>
     where T: ?Sized + Serialize, {
-         error(self.ser, ErrorCode::Unsupported_Cache_Type)
+         error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     #[inline]
     fn serialize_char(self, _value: char) -> Result<()> {
-        error(self.ser, ErrorCode::Unsupported_Cache_Type)
+        error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     #[inline]
     fn serialize_unit_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str) -> Result<()> {
-         error(self.ser, ErrorCode::Unsupported_Cache_Type)
+         error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     #[inline]
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
-        error(self.ser, ErrorCode::Unsupported_Cache_Type)
+        error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     #[inline]
     fn serialize_tuple_struct(self,_name: &'static str, _len: usize,) -> Result<Self::SerializeTupleStruct> {
-        error(self.ser, ErrorCode::Unsupported_Cache_Type)
+        error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     #[inline]
     fn serialize_tuple_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str,_len: usize, ) -> Result<Self::SerializeTupleVariant> {
-         error(self.ser, ErrorCode::Unsupported_Cache_Type)
+         error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     #[inline]
     fn serialize_struct( self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        error(self.ser, ErrorCode::Unsupported_Cache_Type)
+        error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
     #[inline]
     fn serialize_struct_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self::SerializeStructVariant> {
-        error(self.ser, ErrorCode::Unsupported_Cache_Type)
+        error(self.ser, ErrorCode::UnsupportedCacheType)
     }
 
 }
