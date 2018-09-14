@@ -141,7 +141,8 @@ impl<'de> Deserialize<'de> for Value {
                                 None => Err(de::Error::custom("missing double"))
                             }
                         }
-                        codes::BYTES => {
+                        codes::BYTES_PACKED_LENGTH_START..=0xD8
+                        | codes::BYTES => {
                             let val: Option<ByteBuf> = seq.next_element_seed(BYTES_SEED)?;
                             match val {
                                 Some(bb) => {
@@ -278,7 +279,7 @@ impl<'de> Deserialize<'de> for Value {
                                 None => Err(de::Error::custom("missing BOOLEAN_ARRAY"))
                             }
                         }
-                        _ => Err(de::Error::custom("UnmatchedCode"))
+                        _ => Err(de::Error::custom(format!("Value UnmatchedCode:: {}", code as u8)))
                     }
                 } else {
                     Err(de::Error::custom("code == None"))
