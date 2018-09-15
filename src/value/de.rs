@@ -101,9 +101,17 @@ impl<'de> Deserialize<'de> for Value {
 
                 if let Some(code) = code {
                     match code as u8 {
-                        codes::NULL => Ok(Value::NULL),
-                        codes::TRUE => Ok(Value::BOOL(true)),
-                        codes::FALSE => Ok(Value::BOOL(false)),
+                        codes::NULL => {
+                            let _: Option<()> = seq.next_element()?;
+                            Ok(Value::NULL)
+                        },
+                        codes::TRUE | codes::FALSE => {
+                            let B: Option<bool> = seq.next_element()?;
+                            match B {
+                                Some(b) => Ok(Value::BOOL(b)),
+                                None => Err(de::Error::custom("expected BOOL"))
+                            }
+                        },
                         0xFF | 0x00..=0x7f | codes::INT => {
                             let val: Option<i64> = seq.next_element()?;
                             match val {

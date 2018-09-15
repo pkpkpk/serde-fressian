@@ -39,6 +39,17 @@ fn bool_value_rt(){
     assert_eq!(test_value, Value::BOOL(true));
     let test_bytes: Vec<u8> = ser::to_vec(&test_value).unwrap();
     assert_eq!(control_bytes, test_bytes);
+
+    // (write [true false true])
+    let control_bytes: Vec<u8> = vec![231,245,246,245];
+    let control_val: Vec<bool> = vec![true,false,true];
+    let test_val: Vec<bool> = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_val, test_val);
+
+    let control_value: Value = Value::LIST(vec![Value::BOOL(true), Value::BOOL(false), Value::BOOL(true)]);
+    let test_value: Value = de::from_vec(&control_bytes).unwrap();
+    assert_eq!(control_value, test_value);
+
 }
 
 #[test]
