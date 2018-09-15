@@ -298,9 +298,20 @@ where
 
     fn serialize_char(self, v: char) -> Result<()> { self.serialize_str(&v.to_string()) }
 
+    #[inline]
     fn serialize_str(self, v: &str) -> Result<()> {
-        // #[cfg(target_arch = "wasm32-unknown-unknown")]
-        self.write_string(v)
+        if cfg!(all(target_arch = "wasm32", target_os = "unknown")) {
+            // bytelength + pointer
+            self.write_code(codes::STR)?;
+            if v.len() == 0 {
+                self.write_count(0)
+            } else {
+                self.write_count(v.len())?;
+                self.write_int(v.as_ptr() as i64)
+            }
+        } else {
+            self.write_string(v)
+        }
     }
 
     fn serialize_bytes(self, bytes: &[u8]) -> Result<()> { self.write_bytes(bytes, 0, bytes.len()) }

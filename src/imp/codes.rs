@@ -20,7 +20,7 @@ pub const BIGDEC: u8 = 0xC7; //199
 pub const INST: u8 = 0xC8; //200
 pub const SYM: u8 = 0xC9; //201
 pub const KEY: u8 = 0xCA; // 202
-pub const ERROR: u8 = 0xCB; // 203 <= WASM ONLY //////////////
+pub const ERROR: u8 = 0xCB; // 203 <= extended
 pub const GET_PRIORITY_CACHE: u8 = 0xCC; //204
 pub const PUT_PRIORITY_CACHE: u8 = 0xCD; //205
 pub const PRECACHE: u8 = 0xCE; //206
@@ -42,7 +42,8 @@ pub const BEGIN_OPEN_LIST: u8 = 0xEE; //238
 pub const STRUCTTYPE: u8 = 0xEF; //239
 pub const STRUCT: u8 = 0xF0; //240
 pub const META: u8 = 0xF1; //241
-// 242,243
+pub const STR: u8 = 0xF2; //  <= extended, WASM write only
+// 243
 pub const ANY: u8 = 0xF4; //244
 pub const TRUE: u8 = 0xF5; //245
 pub const FALSE: u8 = 0xF6; //246
