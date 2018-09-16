@@ -1,16 +1,10 @@
-
 use std::collections::{BTreeSet, BTreeMap};
 use std::cmp::{Ordering, Ord, PartialOrd};
-// use std::fmt::{Display, Formatter};
-// use std::f64;
-
 use serde::ser::Serialize;
 use serde_bytes::ByteBuf;
-
 use ordered_float::OrderedFloat;
 
-// this stuff all needs wrappers so we can have serialize/deserialize
-// TODO explore remote attr, specialization so we can dump these
+use error::{Error};
 use INST::{INST};
 use UUID::{UUID};
 use URI::{URI};
@@ -21,15 +15,9 @@ use typed_arrays::*;
 use SET::{SET};
 
 mod de;
-// mod ser;
-// mod from;
 // mod index;
-// mod partial_eq;
-// use self::ser::Serializer;
 
 /// Represents a Fressian value
-/// see serde_json + https://github.com/mozilla/mentat/blob/master/edn/src/types.rs
-// mentat also has fleshed out symbols, kws, linkedlist
 #[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
 pub enum Value {
     NULL,
