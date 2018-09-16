@@ -139,7 +139,8 @@ impl<'de> Deserialize<'de> for Value {
                                 None => Err(de::Error::custom("missing double"))
                             }
                         }
-                        codes::STRING_PACKED_LENGTH_START..=codes::STRING_PACKED_LENGTH_END
+                        codes::UTF8
+                        |codes::STRING_PACKED_LENGTH_START..=codes::STRING_PACKED_LENGTH_END
                         | codes::STRING => {
                             let val: Option<String> = seq.next_element()?;
                             match val {

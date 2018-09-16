@@ -154,7 +154,14 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
             codes::UTF8 => {
                 let length = self.rawIn.read_count(&mut self.rdr)?;
-                visitor.visit_str(self.rawIn.read_raw_utf8(&mut self.rdr, length as usize)?)
+                let string = self.rawIn.read_raw_utf8(&mut self.rdr, length as usize)?;
+
+                if self.cache_next {
+                    self.cache_next = false;
+                    self.add_priority_cache(Value::STRING(string.clone()))
+                }
+
+                visitor.visit_string(string)
             }
 
             codes::LIST_PACKED_LENGTH_START..=235 => {

@@ -262,14 +262,19 @@ impl<'a> RawInput {
         self.read_bytes_code(reader, code as i8)
     }
 
-    /// should this be fn of bytes only?
-    pub fn read_raw_utf8(&mut self, reader: &'a mut ByteReader, length: usize) -> Result<&'a str> {
+    /// could this be -> &'a str ?
+    #[inline]
+    pub fn read_raw_utf8(&mut self, reader: &'a mut ByteReader, length: usize) -> Result<String> {
         // let length = self.read_count()?;
-        let bytes = self.read_raw_bytes(reader, length)?;
-        let s: &str = unsafe {
-            std::str::from_utf8_unchecked(bytes)
-        };
-        Ok(s)
+        if  length == 0 {
+            Ok("".to_string())
+        } else {
+            let bytes = self.read_raw_bytes(reader, length)?;
+            let s: &str = unsafe {
+                std::str::from_utf8_unchecked(bytes)
+            };
+            Ok(s.to_string())
+        }
     }
 
     pub fn read_fressian_string(&mut self, reader: &'a mut ByteReader, length: usize) -> Result<String> {
@@ -331,7 +336,7 @@ impl<'a> RawInput {
             // }
             codes::UTF8 => {
                 let length = RawInput.read_count(rdr)?;
-                RawInput.read_raw_utf8(rdr, length as usize).and_then(|s: &str| Ok( s.to_string() ) )
+                RawInput.read_raw_utf8(rdr, length as usize)
             }
             _ => error(rdr, ErrorCode::ExpectedStringCode)
         }
