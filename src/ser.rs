@@ -300,18 +300,19 @@ where
 
     #[inline]
     fn serialize_str(self, v: &str) -> Result<()> {
-        if cfg!(all(target_arch = "wasm32", target_os = "unknown")) {
-            // bytelength + pointer
-            self.write_code(codes::STR)?;
-            if v.len() == 0 {
-                self.write_count(0)
-            } else {
-                self.write_count(v.len())?;
-                self.write_int(v.as_ptr() as i64)
-            }
-        } else {
-            self.write_string(v)
-        }
+        // if cfg!(all(target_arch = "wasm32", target_os = "unknown")) {
+        //     // bytelength + pointer
+        //     self.write_code(codes::STR)?;
+        //     if v.len() == 0 {
+        //         self.write_count(0)
+        //     } else {
+        //         self.write_count(v.len())?;
+        //         self.write_int(v.as_ptr() as i64)
+        //     }
+        // } else {
+        //     self.write_string(v)
+        // }
+        self.write_string(v)
     }
 
     fn serialize_bytes(self, bytes: &[u8]) -> Result<()> { self.write_bytes(bytes, 0, bytes.len()) }
@@ -332,10 +333,6 @@ where
         T: ?Sized + Serialize,
     {
         match _name {
-            "ERROR" => {
-                self.write_code(codes::ERROR)?;
-                value.serialize(self)
-            }
             "SET" => {
                 self.write_code(codes::SET)?;
                 value.serialize(self)
@@ -453,7 +450,16 @@ where
         T: ?Sized + Serialize,
     {
         match name {
-            "Result" => value.serialize(self),
+            "Result" => {
+                match variant {
+                    "Ok" => value.serialize(self),
+                    "Err" => {
+                        self.write_code(codes::ERROR)?;
+                        value.serialize(self)
+                    }
+                    &_ => Err(Error::msg("serialize result failed to match enum".to_string()))
+                }
+            }
             _ => {
                 self.write_list_header(2)?;
                 variant.serialize(&mut *self)?;

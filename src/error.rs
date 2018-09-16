@@ -5,6 +5,7 @@ use std::fmt::{self, Debug, Display};
 use serde::{de};
 use serde::ser::{self,Serialize, Serializer, SerializeMap};
 use std::io;
+use std::error::Error as StdError;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 
@@ -76,9 +77,6 @@ impl Serialize for ErrorImpl {
     where
         S: Serializer,
     {
-
-        // would be nice to distinguish writing from reading errors rather
-        // write position is not very useful
         let mut map_state = serializer.serialize_map(None)?;
 
         map_state.serialize_key("type")?;
@@ -91,7 +89,6 @@ impl Serialize for ErrorImpl {
         map_state.serialize_value(&self.position)?;
 
         map_state.serialize_key("ErrorCode")?;
-        // map_state.serialize_value(&self.code)?;
 
         match &self.code {
             ErrorCode::Io(_) => {
@@ -113,6 +110,15 @@ impl Serialize for ErrorImpl {
         }
 
         map_state.end()
+    }
+}
+
+impl Serialize for Error {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.err.serialize(serializer)
     }
 }
 
