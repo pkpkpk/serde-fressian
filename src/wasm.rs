@@ -43,8 +43,9 @@ fn vec_to_ptr(mut vec: Vec<u8>) -> *mut c_void {
 
 
 /// Serialize to a vec and give ownership to javascript via a pointer.
-///   - care should be taken by javascript consumers to read and release the bytes
+///   - care should be taken by javascript consumers to read and free the bytes
 ///     synchronously and before any other calls/writes to the wasm module
+///      - fress.wasm/read does this for you
 ///   - You can use Result<T,E> where T,E: Serialize; errors will be written
 ///     with an error code and picked up by the fress client as such
 pub fn to_js<S: Serialize>(value: S) -> *mut c_void {
