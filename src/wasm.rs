@@ -1,6 +1,8 @@
 
 use std::mem;
 use std::os::raw::{c_void};
+use std::error::Error;
+
 use de::{self};
 use ser::{self};
 use imp::io::{ByteWriter, IWriteBytes};
@@ -8,15 +10,6 @@ use error::{self};
 
 use serde::de::{Deserialize};
 use serde::ser::{Serialize, Serializer, SerializeMap};
-
-impl Serialize for error::Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_newtype_struct("ERROR", &self.err)
-    }
-}
 
 /// return a pointer to available memory of given byte length
 #[no_mangle]
@@ -41,10 +34,21 @@ pub extern "C" fn fress_free(ptr: *mut u8, cap: usize) {
     let _ = ptr_to_vec(ptr, cap);
 }
 
-pub fn to_js<S: Serialize>(value: S) -> *mut c_void {
-    let mut vec: Vec<u8> = ser::to_vec_footer(&value).unwrap_or_else(|err| ser::to_vec_footer(&err).unwrap());
+#[inline]
+fn vec_to_ptr(mut vec: Vec<u8>) -> *mut c_void {
     let ptr = vec.as_mut_ptr();
     mem::forget(vec);
     return ptr as *mut c_void;
+}
+
+
+/// Serialize to a vec and give ownership to javascript via a pointer.
+///   - care should be taken by javascript consumers to read and release the bytes
+///     synchronously and before any other calls/writes to the wasm module
+///   - You can use Result<T,E> where T,E: Serialize; errors will be written
+///     with an error code and picked up by the fress client as such
+pub fn to_js<S: Serialize>(value: S) -> *mut c_void {
+    let vec: Vec<u8> = ser::to_vec(&value).unwrap_or_else(|err| ser::to_vec(&err).unwrap());
+    vec_to_ptr(vec)
 }
 
