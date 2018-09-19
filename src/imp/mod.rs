@@ -1,6 +1,6 @@
 pub mod codes;
 pub mod ranges;
-pub mod RawOutput;
-pub mod RawInput;
+pub mod rawoutput;
+pub mod rawinput;
 pub mod io;
 pub mod cache;

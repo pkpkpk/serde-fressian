@@ -1,11 +1,11 @@
 use serde::ser::{self, Serialize};
 
-use imp::RawOutput::*;
+use imp::rawoutput::{RawOutput};
 use imp::codes;
 use imp::ranges;
 use error::{Error, ErrorCode, Result};
 use imp::io::{ByteWriter, IWriteBytes};
-use value::{self, Value};
+use value::{Value};
 use imp::cache::{Cache};
 
 pub struct Serializer<W> {
@@ -38,7 +38,8 @@ impl Serializer<ByteWriter<Vec<u8>>> {
     }
 
     pub fn reset(&mut self) {
-        self.writer.reset()
+        self.writer.reset();
+        self.cache.reset();
     }
 
     pub fn get_ref(&self) -> &Vec<u8> {
@@ -54,7 +55,7 @@ impl Serializer<ByteWriter<Vec<u8>>> {
     }
 }
 
-/// write to vec<u8>
+// write to vec<u8>
 pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
@@ -66,7 +67,7 @@ where
     Ok(serializer.into_inner())
 }
 
-/// write to vec<u8> with footer
+// write to vec<u8> with footer
 pub fn to_vec_footer<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
@@ -92,14 +93,14 @@ where
 
         //this clones everything that it is given so that it can test the cache
         // --> this seems unecessary, should be able to borrow, test cache, clone only when unique,
-        let V: Value = Value::from(value.clone().into()); /////////////////////// need refd Vals
-        self.cache_value(value, V)
+        let v: Value = Value::from(value.clone().into()); /////////////////////// need refd Vals
+        self.cache_value(value, v)
     }
 
-    fn cache_value<V>(&mut self, inner: V, Val: Value) -> Result<()>
+    fn cache_value<V>(&mut self, inner: V, val: Value) -> Result<()>
         where V: Serialize,
     {
-        let cached_code: Option<u8> = self.cache.get(&Val);
+        let cached_code: Option<u8> = self.cache.get(&val);
         match cached_code {
             Some(code) => {
                 if code < ranges::PRIORITY_CACHE_PACKED_END {
@@ -110,7 +111,7 @@ where
                 }
             }
             None => {
-                let _ = self.cache.put(Val);
+                let _ = self.cache.put(val);
                 self.write_code(codes::PUT_PRIORITY_CACHE)?;
                 inner.serialize(self)
             }

@@ -1,16 +1,16 @@
 
 use std::collections::{HashMap};
-use value::{self, Value};
+use value::{Value};
 
 pub struct Cache {
     index: u8,
     store: HashMap<Value,u8>
 }
 
-pub enum Put {
-    New(u8),
-    Exists(u8)
-}
+// pub enum Put {
+//     New(u8),
+//     Exists(u8)
+// }
 
 impl Cache {
     pub fn new() -> Self {

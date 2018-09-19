@@ -1,18 +1,16 @@
 use serde::de::{
-    self, Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer,
-    MapAccess, SeqAccess, VariantAccess, Visitor,
+    self, Deserialize, DeserializeSeed, MapAccess, SeqAccess, Visitor,
+    // EnumAccess, IntoDeserializer, VariantAccess,
 };
 
 use imp::io::{ByteReader};
 use error::{Error, ErrorCode, Result};
-use imp::RawInput::{RawInput};
+use imp::rawinput::{RawInput};
 use imp::codes;
-use value::{self, Value};
-use std::collections::{HashMap};
+use value::{Value};
 
 pub struct Deserializer<'de>{
     rdr: ByteReader<'de>,
-    rawIn: RawInput,
     cache_next: bool,
     priority_cache: Vec<Value>
 }
@@ -28,7 +26,6 @@ impl<'de> Deserializer<'de>
     pub fn from_bytes(bytes: &'de [u8]) -> Self {
         Deserializer {
             rdr: ByteReader::new(bytes),
-            rawIn: RawInput,
             cache_next: false,
             priority_cache: Vec::<Value>::new()
         }
@@ -55,7 +52,10 @@ impl<'de> Deserializer<'de>
         self.priority_cache.get(index)
     }
 
-    // reset
+    pub fn reset(&mut self) {
+        self.rdr.reset();
+        self.priority_cache.clear();
+    }
 }
 
 pub fn from_bytes<'a, T>(s: &'a [u8]) -> Result<T>
@@ -102,22 +102,22 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
 
             codes::TRUE | codes::FALSE => {
-                visitor.visit_bool(self.rawIn.read_boolean_code(&mut self.rdr, code)?)
+                visitor.visit_bool(RawInput.read_boolean_code(&mut self.rdr, code)?)
             }
             codes::INT | 0x00..=0x7f | 0xFF => {
-                visitor.visit_i64(self.rawIn.read_int_code(&mut self.rdr, code)?)
+                visitor.visit_i64(RawInput.read_int_code(&mut self.rdr, code)?)
             }
 
             codes::FLOAT => {
-                visitor.visit_f32(self.rawIn.read_float_code(&mut self.rdr, code)?)
+                visitor.visit_f32(RawInput.read_float_code(&mut self.rdr, code)?)
             }
 
             codes::DOUBLE | codes::DOUBLE_0 | codes::DOUBLE_1  => {
-                visitor.visit_f64(self.rawIn.read_double_code(&mut self.rdr, code)?)
+                visitor.visit_f64(RawInput.read_double_code(&mut self.rdr, code)?)
             }
 
             codes::BYTES | codes::BYTES_PACKED_LENGTH_START..=215 => {
-                visitor.visit_bytes(self.rawIn.read_bytes_code(&mut self.rdr, code)?)
+                visitor.visit_bytes(RawInput.read_bytes_code(&mut self.rdr, code)?)
             }
 
             codes::BYTES_CHUNK => {
@@ -126,7 +126,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
             codes::STRING_PACKED_LENGTH_START..=225 => {
                 let length = code as u8 - codes::STRING_PACKED_LENGTH_START;
-                let string: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
+                let string: String = RawInput.read_fressian_string(&mut self.rdr, length as usize)?;
 
                 if self.cache_next {
                     self.cache_next = false;
@@ -137,8 +137,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
 
             codes::STRING => {
-                let length = self.rawIn.read_count(&mut self.rdr)?;
-                let string: String = self.rawIn.read_fressian_string(&mut self.rdr, length as usize)?;
+                let length = RawInput.read_count(&mut self.rdr)?;
+                let string: String = RawInput.read_fressian_string(&mut self.rdr, length as usize)?;
 
                 if self.cache_next {
                     self.cache_next = false;
@@ -153,8 +153,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
 
             codes::UTF8 => {
-                let length = self.rawIn.read_count(&mut self.rdr)?;
-                let string = self.rawIn.read_raw_utf8(&mut self.rdr, length as usize)?;
+                let length = RawInput.read_count(&mut self.rdr)?;
+                let string = RawInput.read_raw_utf8(&mut self.rdr, length as usize)?;
 
                 if self.cache_next {
                     self.cache_next = false;
@@ -170,7 +170,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
 
             codes::LIST => {
-                let length = self.rawIn.read_count(&mut self.rdr)?;
+                let length = RawInput.read_count(&mut self.rdr)?;
                 visitor.visit_seq(FixedListReader::new(self, length as usize))
             }
 
@@ -191,7 +191,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                     }
 
                     codes::LIST => {
-                        let length = self.rawIn.read_count(&mut self.rdr)?;
+                        let length = RawInput.read_count(&mut self.rdr)?;
                         visitor.visit_map(FixedListReader::new(self, length as usize))
                     }
 
@@ -209,20 +209,20 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             }
 
             codes::INST => {
-                visitor.visit_i64(self.rawIn.read_int(&mut self.rdr)?)
+                visitor.visit_i64(RawInput.read_int(&mut self.rdr)?)
             }
 
             codes::UUID => {
-                visitor.visit_bytes(self.rawIn.read_bytes(&mut self.rdr)?)
+                visitor.visit_bytes(RawInput.read_bytes(&mut self.rdr)?)
             }
 
             codes::URI => {
                 // Url crate wants &str
-                visitor.visit_string(self.rawIn.read_string(&mut self.rdr)?)
+                visitor.visit_string(RawInput.read_string(&mut self.rdr)?)
             }
 
             codes::REGEX => {
-                visitor.visit_string(self.rawIn.read_string(&mut self.rdr)?)
+                visitor.visit_string(RawInput.read_string(&mut self.rdr)?)
             }
 
             codes::SYM => {
@@ -245,7 +245,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             | codes::DOUBLE_ARRAY
             | codes::BOOLEAN_ARRAY
             => {
-                let length = self.rawIn.read_count(&mut self.rdr)?;
+                let length = RawInput.read_count(&mut self.rdr)?;
                 visitor.visit_seq(FixedListReader::new(self, length as usize))
             }
 
@@ -295,14 +295,15 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         }
     }
 
-    fn deserialize_tuple_struct<V>(self, name: &'static str, len: usize, visitor: V) -> Result<V::Value>
+    fn deserialize_tuple_struct<V>(self, name: &'static str, _len: usize, visitor: V) -> Result<V::Value>
         where
             V: Visitor<'de>,
     {
         match name {
             "CODE" => {
                 // this exists for deserialize Value lookahead
-                //this will choke on cache codes, need to peek until next value code ///////////////////////////////
+                //this will choke on cache codes, need to peek until next value code///////////////////////////////
+                // should this be read?
                 visitor.visit_i8(self.peek_next_code()?)
             }
             _ => self.deserialize_seq(visitor)
@@ -312,11 +313,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value>
         where V: Visitor<'de>,
     {
-        //peeking the code increments count by 1
-        // so a simple CODE:DATA pair is length 2
-        // accomodating CODE:DATA:DATA (sym, kw,) etc needs longer
-        // is there a reason to cap? reason not to?
-        visitor.visit_seq(FixedListReader::new(self, 3))
+        visitor.visit_seq(FixedListReader::new(self, len))
     }
 }
 
@@ -334,7 +331,7 @@ fn visit_list<'a, 'de, V>(de: &'a mut Deserializer<'de>, visitor: V) -> Result<V
         }
 
         codes::LIST => {
-            let length = de.rawIn.read_count(&mut de.rdr)?;
+            let length = RawInput.read_count(&mut de.rdr)?;
             visitor.visit_seq(FixedListReader::new(de, length as usize))
         }
 

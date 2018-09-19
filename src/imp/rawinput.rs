@@ -5,7 +5,6 @@ use imp::io::{ByteReader};
 use error::{Error, ErrorCode, Result};
 
 use byteorder::*;
-use std::convert::TryFrom;
 
 #[derive(Clone, Debug)]
 pub struct RawInput;
@@ -16,16 +15,6 @@ fn error<T>(rdr: &ByteReader, reason: ErrorCode) -> Result<T> {
 }
 
 impl<'a> RawInput {
-
-    fn read_u8(&mut self, reader: &'a mut ByteReader) -> Result<&'a u8>
-    {
-        reader.read_u8()
-    }
-
-    fn read_i8(&mut self, reader: &'a mut ByteReader) -> Result<i8>
-    {
-        reader.read_i8()
-    }
 
     fn read_raw_bytes(&mut self, reader: &'a mut ByteReader, length: usize) -> Result<&'a[u8]>
     {
@@ -150,13 +139,9 @@ impl<'a> RawInput {
         Ok( *reader.peek_u8()? as i8)
     }
 
-    fn read_i32(&mut self, reader: &'a mut ByteReader) -> Result<i32> {
-        Ok(self.read_int(reader)? as i32)
-    }
-
     pub fn read_count(&mut self, reader: &'a mut ByteReader) -> Result<i32> {
         //////// coercion to i32 seems pointlessly complicated
-        self.read_i32(reader)
+        Ok(self.read_int(reader)? as i32)
     }
 
     fn read_raw_float(&mut self, reader: &'a mut ByteReader) -> Result<f32> {
@@ -186,6 +171,7 @@ impl<'a> RawInput {
         }
     }
 
+    #[allow(unused)]
     pub fn read_double(&mut self, reader:&'a mut ByteReader) -> Result<f64> {
         let code = *reader.read_u8()?;
         self.read_double_code(reader, code as i8)
@@ -200,6 +186,7 @@ impl<'a> RawInput {
         }
     }
 
+    #[allow(unused)]
     pub fn read_float(&mut self, reader: &'a mut ByteReader) -> Result<f32> {
         let code = *reader.read_u8()?;
         self.read_float_code(reader,code as i8)
@@ -217,13 +204,13 @@ impl<'a> RawInput {
         }
     }
 
+    #[allow(unused)]
     pub fn read_boolean(&mut self, reader: &'a mut ByteReader) -> Result<bool> {
         let code = reader.read_i8()?;
         self.read_boolean_code(reader, code)
     }
 
-    // have reconstruct in buffer, doesnt make sense to returns a slice of a new buffer
-    // so this returns a vec whereas read_bytes returns slice view on input.
+    #[allow(unused)]
     fn internal_read_chunked_bytes(&mut self, reader: &'a mut ByteReader) -> Result<Vec<u8>> {
         let mut buffer: Vec<u8> = Vec::with_capacity(65536);
         let mut code: u8 = codes::BYTES_CHUNK;
@@ -257,6 +244,7 @@ impl<'a> RawInput {
     }
 
     // this reads of the `fressian bytes` value type, not literal bytes from the reader.
+    #[inline]
     pub fn read_bytes(&mut self, reader: &'a mut ByteReader) -> Result<&'a [u8]> {
         let code = *reader.read_u8()?;
         self.read_bytes_code(reader, code as i8)
@@ -345,9 +333,10 @@ impl<'a> RawInput {
 }
 
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 mod test {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

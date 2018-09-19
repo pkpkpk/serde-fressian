@@ -1,15 +1,11 @@
-
 use std::mem;
 use std::os::raw::{c_void};
-use std::error::Error;
 
-use de::{self};
-use ser::{self, Serializer};
-use imp::io::{ByteWriter, IWriteBytes};
-use error::{self};
+// use de::{self};
+use ser::{self};
 
-use serde::de::{Deserialize};
-use serde::ser::{Serialize, SerializeMap};
+// use serde::de::{Deserialize};
+use serde::ser::{Serialize};
 
 /// return a pointer to available memory of given byte length
 #[no_mangle]

@@ -1,15 +1,14 @@
-use std::collections::{BTreeSet, BTreeMap};
+#![allow(non_camel_case_types, non_snake_case)]
+
+use std::collections::{BTreeMap};
 use std::fmt;
 
-use serde::de::{
-    self, Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer,
-    MapAccess, SeqAccess, VariantAccess, Visitor,
-};
+use serde::de::{ self, Deserialize, SeqAccess, Visitor};
 
 use ordered_float::OrderedFloat;
 use serde_bytes::ByteBuf;
 
-use error::{Error};
+// use error::{Error};
 use imp::codes;
 use value::Value;
 use INST::{INST};

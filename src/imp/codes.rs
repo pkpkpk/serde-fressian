@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 
 pub const PRIORITY_CACHE_PACKED_START: u8 = 0x80; //128
 pub const PRIORITY_CACHE_PACKED_END: u8 = 0xA0; // 160

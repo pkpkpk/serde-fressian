@@ -5,7 +5,6 @@ use std::fmt::{self, Debug, Display};
 use serde::{de};
 use serde::ser::{self,Serialize, Serializer, SerializeMap};
 use std::io;
-use std::error::Error as StdError;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 
@@ -48,9 +47,9 @@ pub struct ErrorImpl {
 pub enum Category {
     Io,
     Eof,
-    de,
-    ser,
-    misc
+    De,
+    Ser,
+    Misc
 }
 
 impl ErrorImpl{
@@ -61,13 +60,13 @@ impl ErrorImpl{
             ErrorCode::Io(_) => Category::Io,
 
             ErrorCode::UnsupportedType
-            | ErrorCode::Message(_) => Category::misc,
+            | ErrorCode::Message(_) => Category::Misc,
 
             ErrorCode::UnsupportedTAType
             | ErrorCode::UnsupportedCacheType
-            | ErrorCode::IntTooLargeFori64 => Category::ser,
+            | ErrorCode::IntTooLargeFori64 => Category::Ser,
 
-            _ => Category::de
+            _ => Category::De
         }
     }
 }
@@ -155,7 +154,7 @@ impl Error {
         }
     }
 
-    pub fn Eof(position: usize) -> Self {
+    pub fn eof(position: usize) -> Self {
         Error {
             err: Box::new(ErrorImpl {
                 code: ErrorCode::Eof,
@@ -190,7 +189,7 @@ impl Display for ErrorCode {
             ErrorCode::Eof => f.write_str("Eof"),
             ErrorCode::Message(ref msg) => f.write_str(msg),
             ErrorCode::Io(ref err) => Display::fmt(err, f),
-            ErrorCode::UnmatchedCode(code) => f.write_str("UnmatchedCode"),
+            ErrorCode::UnmatchedCode(_code) => f.write_str("UnmatchedCode"),
             ErrorCode::UnsupportedType => f.write_str("UnsupportedType"),
             ErrorCode::UnsupportedTAType => f.write_str("UnsupportedTAType"),
             ErrorCode::UnsupportedCacheType => f.write_str("UnsupportedCacheType"),

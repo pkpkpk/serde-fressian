@@ -1,10 +1,9 @@
 use std::collections::{BTreeSet, BTreeMap};
-use std::cmp::{Ordering, Ord, PartialOrd};
 use serde::ser::Serialize;
 use serde_bytes::ByteBuf;
 use ordered_float::OrderedFloat;
 
-use error::{Error};
+// use error::{Error};
 use INST::{INST};
 use UUID::{UUID};
 use URI::{URI};

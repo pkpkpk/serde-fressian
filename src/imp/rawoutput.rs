@@ -7,8 +7,8 @@
 
 extern crate serde;
 
-use error::{Error, Result};
-use imp::io::{ByteWriter, IWriteBytes};
+use error::{Result};
+use imp::io::{IWriteBytes};
 use imp::codes;
 use imp::ranges;
 use std::cmp;

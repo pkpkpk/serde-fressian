@@ -35,7 +35,7 @@ pub mod INST {
     // }
 
     use serde::de::{Deserializer, Deserialize};
-    use serde::ser::{Serialize, Serializer, SerializeStruct};
+    use serde::ser::{Serialize, Serializer};
 
     #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
     pub struct INST (i64);
@@ -74,7 +74,7 @@ pub mod INST {
 pub mod UUID {
 
     use serde::de::{Deserializer, Deserialize, Error};
-    use serde::ser::{Serialize, Serializer, SerializeStruct};
+    use serde::ser::{Serialize, Serializer};
     use serde_bytes::ByteBuf;
 
     use uuid::Uuid;
@@ -120,7 +120,7 @@ pub mod UUID {
 
 pub mod URI {
     use serde::de::{Deserializer, Deserialize, Error};
-    use serde::ser::{Serialize, Serializer, SerializeStruct};
+    use serde::ser::{Serialize, Serializer};
     use url::{Url};
 
     #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
@@ -165,7 +165,7 @@ pub mod REGEX {
     /// just wrapping
 
     use serde::de::{Deserializer, Deserialize, Error};
-    use serde::ser::{Serialize, Serializer, SerializeStruct};
+    use serde::ser::{Serialize, Serializer};
 
     use regex::Regex;
 
@@ -289,7 +289,6 @@ pub mod SYM {
     }
 
     use serde::ser::SerializeTupleStruct;
-    use imp::codes;
 
     impl Serialize for SYM {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -348,7 +347,6 @@ pub mod KEY {
     }
 
     use serde::ser::SerializeTupleStruct;
-    use imp::codes;
 
     impl Serialize for KEY {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -365,7 +363,7 @@ pub mod KEY {
 
 pub mod typed_arrays {
 
-    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer};
 
     #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
@@ -556,7 +554,7 @@ pub mod typed_arrays {
 
 pub mod SET {
 
-    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer};
     use std::collections::{BTreeSet};
     use std::cmp::{Ord};

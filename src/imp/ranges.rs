@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 
 pub const PACKED_1_START: i64 = -1;
 pub const PACKED_1_END: i64 = 64;

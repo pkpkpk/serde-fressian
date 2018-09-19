@@ -1,4 +1,3 @@
-use byteorder::{BigEndian, WriteBytesExt};
 use error::{Error, ErrorCode, Result};
 use std::cmp;
 
@@ -20,6 +19,7 @@ impl<'a> ByteReader<'a> {
         }
     }
 
+    #[allow(unused)]
     pub fn from_vec(v: &'a Vec<u8>) -> Self {
         ByteReader::new(v.as_slice())
     }
@@ -114,11 +114,6 @@ impl IWriteBytes for ByteWriter<Vec<u8>> {
     // pub fn getChecksum(&self){ self.checksum.getChecksum() }
 }
 
-fn wrt_error<W: IWriteBytes,T>(wrt: W, reason: ErrorCode) -> Result<T> {
-    let position: usize = wrt.get_bytes_written();
-    Err(Error::syntax(reason, position))
-}
-
 impl ByteWriter<Vec<u8>> {
 
     pub fn from_vec(out: Vec<u8>) -> Self {
@@ -200,7 +195,8 @@ fn vec_write_bytes(vec: &mut Vec<u8>, pos: usize, buf: &[u8]) {
 
 
 mod test {
-    use super::*;
+    #![allow(unused_imports)]
+    use super::{*};
 
     #[test]
     fn read_byte_test (){
@@ -270,7 +266,7 @@ mod test {
     #[test]
     fn into_inner_test(){
         let data: Vec<u8> = vec![0, 1, 2, 3, 4];
-        let mut wrt = ByteWriter::from_vec(data);
+        let wrt = ByteWriter::from_vec(data);
         assert_eq!(wrt.into_inner(), vec![]);
     }
 }

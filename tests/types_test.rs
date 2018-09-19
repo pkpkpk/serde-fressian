@@ -95,7 +95,7 @@ fn regex_test(){
     let test_bytes: Vec<u8> = serde_fressian::ser::to_vec(&REGEX::from_Regex(control_value)).unwrap();
     assert_eq!(test_bytes, control_bytes);
     let rt_value: REGEX = serde_fressian::de::from_vec(&test_bytes).unwrap();
-    assert_eq!(test_value.as_str() , r"\n[abc]");
+    assert_eq!(rt_value.as_str() , r"\n[abc]");
 }
 
 #[test]
