@@ -16,12 +16,12 @@ use std::collections::{BTreeSet, BTreeMap};
 use ordered_float::OrderedFloat;
 use serde_bytes::ByteBuf;
 
-use serde_fressian::INST::{INST};
-use serde_fressian::UUID::{UUID};
-use serde_fressian::URI::{URI};
-use serde_fressian::REGEX::{REGEX};
-use serde_fressian::SYM::{SYM};
-use serde_fressian::KEY::{KEY};
+use serde_fressian::inst::{INST};
+use serde_fressian::uuid::{UUID};
+use serde_fressian::uri::{URI};
+use serde_fressian::regex::{REGEX};
+use serde_fressian::sym::{SYM};
+use serde_fressian::key::{KEY};
 use serde_fressian::typed_arrays::*;
 
 use serde_fressian::value::{self, Value};

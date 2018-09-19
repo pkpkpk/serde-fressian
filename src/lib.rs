@@ -14,10 +14,10 @@ extern crate serde_bytes;
 
 extern crate byteorder;
 extern crate ordered_float;
-extern crate uuid;
+extern crate uuid as _uuid;
+extern crate regex as _regex;
 // extern crate chrono;
 extern crate url;
-extern crate regex;
 
 mod imp;
 // pub use imp::{error};
@@ -29,14 +29,14 @@ pub mod types;
 pub mod wasm;
 
 pub use types::{
-    INST,
-    UUID,
-    URI,
-    REGEX,
-    SYM,
-    KEY,
+    inst,
+    uuid,
+    uri,
+    regex,
+    sym,
+    key,
     typed_arrays,
-    SET
+    set
 };
 
 

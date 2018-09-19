@@ -1,6 +1,6 @@
 
 
-pub mod INST {
+pub mod inst {
 
     // was using chrono Datetime<Utc> because thats what mentat used
     // but it appears that Utc is a lossy representation.
@@ -71,13 +71,13 @@ pub mod INST {
     }
 }
 
-pub mod UUID {
+pub mod uuid {
 
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
     use serde_bytes::ByteBuf;
 
-    use uuid::Uuid;
+    use _uuid::Uuid;
 
     #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
     pub struct UUID (Uuid);
@@ -118,7 +118,7 @@ pub mod UUID {
     }
 }
 
-pub mod URI {
+pub mod uri {
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
     use url::{Url};
@@ -160,14 +160,14 @@ pub mod URI {
     }
 }
 
-pub mod REGEX {
+pub mod regex {
     /// might be able to get away with a remote attr here but for consistency
     /// just wrapping
 
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
 
-    use regex::Regex;
+    use _regex::Regex;
 
     #[derive(Shrinkwrap, Clone, Debug)] //PartialOrd, Eq
     pub struct REGEX (Regex);
@@ -236,8 +236,7 @@ pub mod REGEX {
     }
 }
 
-
-pub mod SYM {
+pub mod sym {
 
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
@@ -306,7 +305,7 @@ pub mod SYM {
     }
 }
 
-pub mod KEY {
+pub mod key {
 
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
@@ -552,7 +551,7 @@ pub mod typed_arrays {
     }
 }
 
-pub mod SET {
+pub mod set {
 
     use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer};

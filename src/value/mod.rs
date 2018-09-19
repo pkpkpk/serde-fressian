@@ -4,14 +4,14 @@ use serde_bytes::ByteBuf;
 use ordered_float::OrderedFloat;
 
 // use error::{Error};
-use INST::{INST};
-use UUID::{UUID};
-use URI::{URI};
-use REGEX::{REGEX};
-use SYM::{SYM};
-use KEY::{KEY};
+use inst::{INST};
+use uuid::{UUID};
+use uri::{URI};
+use regex::{REGEX};
+use sym::{SYM};
+use key::{KEY};
 use typed_arrays::*;
-use SET::{SET};
+use set::{SET};
 
 mod de;
 // mod index;
@@ -37,11 +37,11 @@ pub enum Value {
     UUID(UUID),
     REGEX(REGEX),
     URI(URI),
-    INT_ARRAY(Int_Array),
-    LONG_ARRAY(Long_Array),
-    FLOAT_ARRAY(Float_Array),
-    DOUBLE_ARRAY(Double_Array),
-    BOOLEAN_ARRAY(Boolean_Array)
+    IntArray(Int_Array),
+    LongArray(Long_Array),
+    FloatArray(Float_Array),
+    DoubleArray(Double_Array),
+    BooleanArray(Boolean_Array)
     // BIGINT()
     // BIGDEC
     // OBJECT_ARRAY
@@ -78,11 +78,11 @@ impl_into_value!(INST: INST);
 impl_into_value!(REGEX: REGEX);
 impl_into_value!(UUID: UUID);
 impl_into_value!(URI: URI);
-impl_into_value!(INT_ARRAY: Int_Array);
-impl_into_value!(LONG_ARRAY: Long_Array);
-impl_into_value!(FLOAT_ARRAY: Float_Array);
-impl_into_value!(DOUBLE_ARRAY: Double_Array);
-impl_into_value!(BOOLEAN_ARRAY: Boolean_Array);
+impl_into_value!(IntArray: Int_Array);
+impl_into_value!(LongArray: Long_Array);
+impl_into_value!(FloatArray: Float_Array);
+impl_into_value!(DoubleArray: Double_Array);
+impl_into_value!(BooleanArray: Boolean_Array);
 impl_into_value!(BYTES: ByteBuf);
 
 impl<T: Into<Value>> From<Vec<T>> for Value {
@@ -143,11 +143,11 @@ impl Serialize for Value {
             Value::REGEX(ref v) => v.serialize(serializer),
             Value::URI(ref v) => v.serialize(serializer),
             Value::UUID(ref v) => v.serialize(serializer),
-            Value::INT_ARRAY(ref v) => v.serialize(serializer),
-            Value::LONG_ARRAY(ref v) => v.serialize(serializer),
-            Value::FLOAT_ARRAY(ref v) => v.serialize(serializer),
-            Value::DOUBLE_ARRAY(ref v) => v.serialize(serializer),
-            Value::BOOLEAN_ARRAY(ref v) => v.serialize(serializer),
+            Value::IntArray(ref v) => v.serialize(serializer),
+            Value::LongArray(ref v) => v.serialize(serializer),
+            Value::FloatArray(ref v) => v.serialize(serializer),
+            Value::DoubleArray(ref v) => v.serialize(serializer),
+            Value::BooleanArray(ref v) => v.serialize(serializer),
             Value::BYTES(ref v) => serializer.serialize_bytes(v.as_ref()),
 
             // CHAR(char)

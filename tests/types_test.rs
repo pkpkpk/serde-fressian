@@ -9,9 +9,9 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_bytes;
 extern crate serde_fressian;
-extern crate uuid;
+extern crate uuid as _uuid;
 extern crate url;
-extern crate regex;
+extern crate regex as _regex;
 // extern crate chrono;
 
 use std::collections::{HashMap, HashSet};
@@ -28,7 +28,7 @@ fn inst_test(){
     // use chrono::{ DateTime, Utc,};
     // use chrono::offset::{TimeZone, Offset};
     // use chrono::naive::{NaiveDateTime};
-    use serde_fressian::INST::{INST};
+    use serde_fressian::inst::{INST};
 
     // // #inst "2018-08-13T02:20:05.875-00:00"
     // let value: Vec<u8> = vec![200,123,101,49,21,83,115];
@@ -42,8 +42,8 @@ fn inst_test(){
 
 #[test]
 fn uuid_test(){
-    use serde_fressian::UUID::{UUID};
-    use uuid::Uuid;
+    use serde_fressian::uuid::{UUID};
+    use _uuid::Uuid;
 
     // #uuid "c8bf117b-8ee4-4e74-8c1f-51df0a757fe8"
     let control_value =  Uuid::parse_str("c8bf117b-8ee4-4e74-8c1f-51df0a757fe8").unwrap();
@@ -63,7 +63,7 @@ fn uuid_test(){
 #[test]
 fn uri_test(){
     use url::{Url, Host};
-    use serde_fressian::URI::{URI};
+    use serde_fressian::uri::{URI};
 
     // "https://www.youtube.com/watch?v=xvhQitzj0zQ"
     let control_bytes: Vec<u8> = vec![197,227,43,104,116,116,112,115,58,47,47,119,119,119,46,121,111,117,116,117,98,101,46,99,111,109,47,119,97,116,99,104,63,118,61,120,118,104,81,105,116,122,106,48,122,81];
@@ -83,8 +83,8 @@ fn uri_test(){
 
 #[test]
 fn regex_test(){
-    use regex::Regex;
-    use serde_fressian::REGEX::{REGEX};
+    use _regex::Regex;
+    use serde_fressian::regex::{REGEX};
     // "\n[abc]"
     let control_bytes: Vec<u8> = vec![196,225,92,110,91,97,98,99,93];
 
@@ -100,7 +100,7 @@ fn regex_test(){
 
 #[test]
 fn sym_test(){
-    use serde_fressian::SYM::{SYM};
+    use serde_fressian::sym::{SYM};
 
     // (api/write 'foo)
     let control_bytes: Vec<u8> = vec![201,247,205,221,102,111,111];
@@ -129,7 +129,7 @@ fn sym_test(){
 
 #[test]
 fn key_test(){
-    use serde_fressian::KEY::{KEY};
+    use serde_fressian::key::{KEY};
 
     // (api/write :foo)
     let control_bytes: Vec<u8> = vec![202,247,205,221,102,111,111];

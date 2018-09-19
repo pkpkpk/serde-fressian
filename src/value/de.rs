@@ -11,14 +11,14 @@ use serde_bytes::ByteBuf;
 // use error::{Error};
 use imp::codes;
 use value::Value;
-use INST::{INST};
-use UUID::{UUID};
-use URI::{URI};
-use REGEX::{REGEX};
-use SYM::{SYM};
-use types::KEY::KEY;
+use inst::{INST};
+use uuid::{UUID};
+use uri::{URI};
+use regex::{REGEX};
+use sym::{SYM};
+use key::KEY;
 use typed_arrays::*;
-use SET::{SET};
+use set::{SET};
 
 macro_rules! impl_seed {
     ($variant:ident : $T:ident) => {
