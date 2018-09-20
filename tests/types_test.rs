@@ -11,7 +11,7 @@ extern crate serde_bytes;
 extern crate serde_fressian;
 extern crate uuid as _uuid;
 extern crate url;
-extern crate regex as _regex;
+// extern crate regex as _regex;
 // extern crate chrono;
 
 use std::collections::{HashMap, HashSet};
@@ -81,22 +81,22 @@ fn uri_test(){
     assert_eq!(test_value.as_str(), "https://www.youtube.com/watch?v=xvhQitzj0zQ");
 }
 
-#[test]
-fn regex_test(){
-    use _regex::Regex;
-    use serde_fressian::regex::{REGEX};
-    // "\n[abc]"
-    let control_bytes: Vec<u8> = vec![196,225,92,110,91,97,98,99,93];
-
-    let test_value: REGEX = serde_fressian::de::from_vec(&control_bytes).unwrap();
-    assert_eq!(test_value.as_str() , r"\n[abc]");
-
-    let control_value: Regex = Regex::new(r"\n[abc]").unwrap();
-    let test_bytes: Vec<u8> = serde_fressian::ser::to_vec(&REGEX::from_Regex(control_value)).unwrap();
-    assert_eq!(test_bytes, control_bytes);
-    let rt_value: REGEX = serde_fressian::de::from_vec(&test_bytes).unwrap();
-    assert_eq!(rt_value.as_str() , r"\n[abc]");
-}
+// #[test]
+// fn regex_test(){
+//     use _regex::Regex;
+//     use serde_fressian::regex::{REGEX};
+//     // "\n[abc]"
+//     let control_bytes: Vec<u8> = vec![196,225,92,110,91,97,98,99,93];
+//
+//     let test_value: REGEX = serde_fressian::de::from_vec(&control_bytes).unwrap();
+//     assert_eq!(test_value.as_str() , r"\n[abc]");
+//
+//     let control_value: Regex = Regex::new(r"\n[abc]").unwrap();
+//     let test_bytes: Vec<u8> = serde_fressian::ser::to_vec(&REGEX::from_regex(control_value)).unwrap();
+//     assert_eq!(test_bytes, control_bytes);
+//     let rt_value: REGEX = serde_fressian::de::from_vec(&test_bytes).unwrap();
+//     assert_eq!(rt_value.as_str() , r"\n[abc]");
+// }
 
 #[test]
 fn sym_test(){

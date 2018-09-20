@@ -1,5 +1,5 @@
 #![feature(extern_prelude)]
-#![feature(try_from)]
+#![cfg_attr(feature= "use_regex_crate", use_regex_crate)]
 
 extern crate itertools;
 
@@ -8,19 +8,19 @@ extern crate shrinkwraprs;
 
 #[macro_use]
 extern crate serde_derive;
-
 extern crate serde;
 extern crate serde_bytes;
-
 extern crate byteorder;
 extern crate ordered_float;
-extern crate uuid as _uuid;
+
+#[cfg(use_regex_crate)]
 extern crate regex as _regex;
-// extern crate chrono;
+
+extern crate uuid as _uuid;
 extern crate url;
+// extern crate chrono;
 
 mod imp;
-// pub use imp::{error};
 pub mod error;
 pub mod ser;
 pub mod de;

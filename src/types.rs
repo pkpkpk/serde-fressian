@@ -1,5 +1,4 @@
 
-
 pub mod inst {
 
     // was using chrono Datetime<Utc> because thats what mentat used
@@ -160,33 +159,66 @@ pub mod uri {
     }
 }
 
+#[cfg(not(use_regex_crate))]
 pub mod regex {
-    /// might be able to get away with a remote attr here but for consistency
-    /// just wrapping
+
+    #[derive(Shrinkwrap, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct REGEX (pub String);
+
+    impl REGEX {
+        pub fn into_inner(self) -> String {
+            self.0
+        }
+        pub fn from_str(s: &str) -> Result<Self, ()> {
+            Ok(REGEX(s.to_string()))
+        }
+    }
 
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
 
-    use _regex::Regex;
+    impl<'de> Deserialize<'de> for REGEX {
+        fn deserialize<D>(deserializer: D) -> Result<REGEX, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let s: String = String::deserialize(deserializer)?;
 
-    #[derive(Shrinkwrap, Clone, Debug)] //PartialOrd, Eq
+            Ok(REGEX(s))
+        }
+    }
+
+    impl Serialize for REGEX {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("REGEX", self.0.as_str())
+        }
+    }
+}
+
+#[cfg(use_regex_crate)]
+pub mod regex {
+    use _regex::Regex;
+    use std::cmp::{Eq,PartialOrd, Ordering};
+
+    #[derive(Shrinkwrap, Clone, Debug)]
     pub struct REGEX (Regex);
 
     impl REGEX {
-        pub fn from_Regex(re: Regex) -> Self {
+        pub fn from_regex(re: Regex) -> Self {
             REGEX(re)
         }
+
         pub fn into_inner(self) -> Regex {
             self.0
         }
 
         #[inline]
         pub fn from_str(s: &str) -> Result<Self, regex::Error> {
-            Regex::new(s).map(REGEX::from_Regex)
+            Regex::new(s).map(REGEX::from_regex)
         }
     }
-
-    use std::cmp::{Eq,PartialOrd, Ordering};
 
     impl Ord for REGEX {
         fn cmp(&self, other: &REGEX) -> Ordering {
@@ -216,6 +248,9 @@ pub mod regex {
         }
     }
 
+    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::ser::{Serialize, Serializer};
+
     impl<'de> Deserialize<'de> for REGEX {
         fn deserialize<D>(deserializer: D) -> Result<REGEX, D::Error>
             where D: Deserializer<'de>,
@@ -235,6 +270,8 @@ pub mod regex {
         }
     }
 }
+
+
 
 pub mod sym {
 

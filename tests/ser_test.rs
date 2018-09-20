@@ -12,7 +12,6 @@ extern crate serde_bytes;
 extern crate serde_fressian;
 extern crate uuid;
 extern crate url;
-extern crate regex;
 // extern crate chrono;
 
 use std::collections::{HashMap, HashSet};
