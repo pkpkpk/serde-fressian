@@ -163,9 +163,9 @@ fn typed_arrays_test(){
     // (api/write (js/Int32Array. #js[1 2 3]))
     let control_bytes: Vec<u8> = vec![179,3,1,2,3];
     let v: Vec<i32> = vec![1,2,3];
-    let control_value: Int_Array = Int_Array::from_vec(v);
+    let control_value: IntArray = IntArray::from_vec(v);
 
-    let test_value: Int_Array = serde_fressian::de::from_vec(&control_bytes).unwrap();
+    let test_value: IntArray = serde_fressian::de::from_vec(&control_bytes).unwrap();
     assert_eq!(test_value, control_value);
     let test_bytes: Vec<u8> = serde_fressian::ser::to_vec(&control_value).unwrap();
     assert_eq!(test_bytes, control_bytes);
@@ -175,9 +175,9 @@ fn typed_arrays_test(){
     // (js/Float64Array. #js[-2 -1 0 1 2])
     let control_bytes: Vec<u8> = vec![177,5,250,192,0,0,0,0,0,0,0,250,191,240,0,0,0,0,0,0,251,252,250,64,0,0,0,0,0,0,0];
     let v: Vec<f64> = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
-    let control_value: Double_Array = Double_Array::from_vec(v);
+    let control_value: DoubleArray = DoubleArray::from_vec(v);
 
-    let test_value: Double_Array = serde_fressian::de::from_vec(&control_bytes).unwrap();
+    let test_value: DoubleArray = serde_fressian::de::from_vec(&control_bytes).unwrap();
     assert_eq!(test_value, control_value);
     let test_bytes: Vec<u8> = serde_fressian::ser::to_vec(&control_value).unwrap();
     assert_eq!(test_bytes, control_bytes);
@@ -186,9 +186,9 @@ fn typed_arrays_test(){
     // (fress.writer/writeAs w "boolean[]" [true false true false false])
     let control_bytes: Vec<u8> = vec![178,5,245,246,245,246,246];
     let v: Vec<bool>= vec![true,false,true,false,false];
-    let control_value: Boolean_Array = Boolean_Array::from_vec(v);
+    let control_value: BooleanArray = BooleanArray::from_vec(v);
 
-    let test_value: Boolean_Array = serde_fressian::de::from_vec(&control_bytes).unwrap();
+    let test_value: BooleanArray = serde_fressian::de::from_vec(&control_bytes).unwrap();
     assert_eq!(test_value, control_value);
     let test_bytes: Vec<u8> = serde_fressian::ser::to_vec(&control_value).unwrap();
     assert_eq!(test_bytes, control_bytes);

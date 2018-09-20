@@ -37,11 +37,11 @@ pub enum Value {
     UUID(UUID),
     REGEX(REGEX),
     URI(URI),
-    IntArray(Int_Array),
-    LongArray(Long_Array),
-    FloatArray(Float_Array),
-    DoubleArray(Double_Array),
-    BooleanArray(Boolean_Array)
+    IntArray(IntArray),
+    LongArray(LongArray),
+    FloatArray(FloatArray),
+    DoubleArray(DoubleArray),
+    BooleanArray(BooleanArray)
     // BIGINT()
     // BIGDEC
     // OBJECT_ARRAY
@@ -78,11 +78,11 @@ impl_into_value!(INST: INST);
 impl_into_value!(REGEX: REGEX);
 impl_into_value!(UUID: UUID);
 impl_into_value!(URI: URI);
-impl_into_value!(IntArray: Int_Array);
-impl_into_value!(LongArray: Long_Array);
-impl_into_value!(FloatArray: Float_Array);
-impl_into_value!(DoubleArray: Double_Array);
-impl_into_value!(BooleanArray: Boolean_Array);
+impl_into_value!(IntArray: IntArray);
+impl_into_value!(LongArray: LongArray);
+impl_into_value!(FloatArray: FloatArray);
+impl_into_value!(DoubleArray: DoubleArray);
+impl_into_value!(BooleanArray: BooleanArray);
 impl_into_value!(BYTES: ByteBuf);
 
 impl<T: Into<Value>> From<Vec<T>> for Value {

@@ -490,32 +490,32 @@ pub mod typed_arrays {
     use serde::ser::{Serialize, Serializer};
 
     #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
-    pub struct Int_Array (Vec<i32>);
+    pub struct IntArray (Vec<i32>);
 
-    impl Int_Array {
+    impl IntArray {
         pub fn from_vec(v: Vec<i32>) -> Self {
-            Int_Array(v)
+            IntArray(v)
         }
     }
 
-    impl From<Vec<i32>> for Int_Array {
+    impl From<Vec<i32>> for IntArray {
         #[inline]
-        fn from(val: Vec<i32>) -> Int_Array {
-            Int_Array::from_vec(val)
+        fn from(val: Vec<i32>) -> IntArray {
+            IntArray::from_vec(val)
         }
     }
 
-    impl<'de> Deserialize<'de> for Int_Array {
-        fn deserialize<D>(deserializer: D) -> Result<Int_Array, D::Error>
+    impl<'de> Deserialize<'de> for IntArray {
+        fn deserialize<D>(deserializer: D) -> Result<IntArray, D::Error>
             where D: Deserializer<'de>,
         {
             let v: Vec<i32> = Vec::deserialize(deserializer)?;
 
-            Ok(Int_Array(v))
+            Ok(IntArray(v))
         }
     }
 
-    impl Serialize for Int_Array {
+    impl Serialize for IntArray {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
@@ -526,32 +526,32 @@ pub mod typed_arrays {
 
 
     #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
-    pub struct Long_Array (Vec<i64>);
+    pub struct LongArray (Vec<i64>);
 
-    impl Long_Array {
+    impl LongArray {
         pub fn from_vec(v: Vec<i64>) -> Self {
-            Long_Array(v)
+            LongArray(v)
         }
     }
 
-    impl From<Vec<i64>> for Long_Array {
+    impl From<Vec<i64>> for LongArray {
         #[inline]
-        fn from(val: Vec<i64>) -> Long_Array {
-            Long_Array::from_vec(val)
+        fn from(val: Vec<i64>) -> LongArray {
+            LongArray::from_vec(val)
         }
     }
 
-    impl<'de> Deserialize<'de> for Long_Array {
-        fn deserialize<D>(deserializer: D) -> Result<Long_Array, D::Error>
+    impl<'de> Deserialize<'de> for LongArray {
+        fn deserialize<D>(deserializer: D) -> Result<LongArray, D::Error>
             where D: Deserializer<'de>,
         {
             let v: Vec<i64> = Vec::deserialize(deserializer)?;
 
-            Ok(Long_Array(v))
+            Ok(LongArray(v))
         }
     }
 
-    impl Serialize for Long_Array {
+    impl Serialize for LongArray {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
@@ -563,35 +563,35 @@ pub mod typed_arrays {
     use ordered_float::OrderedFloat;
 
     #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
-    pub struct Float_Array (Vec<OrderedFloat<f32>>);
+    pub struct FloatArray (Vec<OrderedFloat<f32>>);
 
-    impl Float_Array {
+    impl FloatArray {
         pub fn from_vec(v: Vec<f32>) -> Self {
             let ret: Vec<OrderedFloat<f32>> = v.into_iter()
                                                .map(|f: f32| OrderedFloat::from(f))
                                                .collect();
-            Float_Array(ret)
+            FloatArray(ret)
         }
     }
 
-    impl From<Vec<f32>> for Float_Array {
+    impl From<Vec<f32>> for FloatArray {
         #[inline]
-        fn from(val: Vec<f32>) -> Float_Array {
-            Float_Array::from_vec(val)
+        fn from(val: Vec<f32>) -> FloatArray {
+            FloatArray::from_vec(val)
         }
     }
 
-    impl<'de> Deserialize<'de> for Float_Array {
-        fn deserialize<D>(deserializer: D) -> Result<Float_Array, D::Error>
+    impl<'de> Deserialize<'de> for FloatArray {
+        fn deserialize<D>(deserializer: D) -> Result<FloatArray, D::Error>
             where D: Deserializer<'de>,
         {
             let v: Vec<OrderedFloat<f32>> = Vec::deserialize(deserializer)?;
 
-            Ok(Float_Array(v))
+            Ok(FloatArray(v))
         }
     }
 
-    impl Serialize for Float_Array {
+    impl Serialize for FloatArray {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
@@ -601,35 +601,35 @@ pub mod typed_arrays {
     }
 
     #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
-    pub struct Double_Array (Vec<OrderedFloat<f64>>);
+    pub struct DoubleArray (Vec<OrderedFloat<f64>>);
 
-    impl Double_Array {
+    impl DoubleArray {
         pub fn from_vec(v: Vec<f64>) -> Self {
             let ret: Vec<OrderedFloat<f64>> = v.into_iter()
                                                .map(|f: f64| OrderedFloat::from(f))
                                                .collect();
-            Double_Array(ret)
+            DoubleArray(ret)
         }
     }
 
-    impl From<Vec<f64>> for Double_Array {
+    impl From<Vec<f64>> for DoubleArray {
         #[inline]
-        fn from(val: Vec<f64>) -> Double_Array {
-            Double_Array::from_vec(val)
+        fn from(val: Vec<f64>) -> DoubleArray {
+            DoubleArray::from_vec(val)
         }
     }
 
-    impl<'de> Deserialize<'de> for Double_Array {
-        fn deserialize<D>(deserializer: D) -> Result<Double_Array, D::Error>
+    impl<'de> Deserialize<'de> for DoubleArray {
+        fn deserialize<D>(deserializer: D) -> Result<DoubleArray, D::Error>
             where D: Deserializer<'de>,
         {
             let v: Vec<OrderedFloat<f64>> = Vec::deserialize(deserializer)?;
 
-            Ok(Double_Array(v))
+            Ok(DoubleArray(v))
         }
     }
 
-    impl Serialize for Double_Array {
+    impl Serialize for DoubleArray {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
@@ -640,32 +640,32 @@ pub mod typed_arrays {
 
 
     #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
-    pub struct Boolean_Array (Vec<bool>);
+    pub struct BooleanArray (Vec<bool>);
 
-    impl Boolean_Array {
+    impl BooleanArray {
         pub fn from_vec(v: Vec<bool>) -> Self {
-            Boolean_Array(v)
+            BooleanArray(v)
         }
     }
 
-    impl From<Vec<bool>> for Boolean_Array {
+    impl From<Vec<bool>> for BooleanArray {
         #[inline]
-        fn from(val: Vec<bool>) -> Boolean_Array {
-            Boolean_Array::from_vec(val)
+        fn from(val: Vec<bool>) -> BooleanArray {
+            BooleanArray::from_vec(val)
         }
     }
 
-    impl<'de> Deserialize<'de> for Boolean_Array {
-        fn deserialize<D>(deserializer: D) -> Result<Boolean_Array, D::Error>
+    impl<'de> Deserialize<'de> for BooleanArray {
+        fn deserialize<D>(deserializer: D) -> Result<BooleanArray, D::Error>
             where D: Deserializer<'de>,
         {
             let v: Vec<bool> = Vec::deserialize(deserializer)?;
 
-            Ok(Boolean_Array(v))
+            Ok(BooleanArray(v))
         }
     }
 
-    impl Serialize for Boolean_Array {
+    impl Serialize for BooleanArray {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,

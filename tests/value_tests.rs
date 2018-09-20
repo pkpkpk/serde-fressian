@@ -156,7 +156,7 @@ fn misc_value_test(){
     // float-array
     // (write (fress.util/f32-array [-2 -1 0 1 2]))
     let control_bytes: Vec<u8> = vec![180,5,249,192,0,0,0,249,191,128,0,0,249,0,0,0,0,249,63,128,0,0,249,64,0,0,0];
-    let v: Float_Array = Float_Array::from(vec![-2.0, -1.0, 0.0, 1.0, 2.0]);
+    let v: FloatArray = FloatArray::from(vec![-2.0, -1.0, 0.0, 1.0, 2.0]);
     let control_value = Value::from(v);
     let test_value: Value = de::from_vec(&control_bytes).unwrap();
     assert_eq!(test_value, control_value);
