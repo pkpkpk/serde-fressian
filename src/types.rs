@@ -161,6 +161,49 @@ pub mod uuid {
     }
 }
 
+#[cfg(not(use_url_crate))]
+pub mod uri {
+    use serde::de::{Deserializer, Deserialize};
+    use serde::ser::{Serialize, Serializer};
+
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
+    pub struct URI (String);
+
+    impl URI {
+        pub fn new(s: String) -> Self {
+            URI(s)
+        }
+
+        pub fn into_inner(self) -> String {
+            self.0
+        }
+
+        #[inline]
+        pub fn from_str(s: &str) -> Result<Self, ()> {
+            Ok(URI(s.to_string()))
+        }
+    }
+    impl<'de> Deserialize<'de> for URI {
+        fn deserialize<D>(deserializer: D) -> Result<URI, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let s: String = String::deserialize(deserializer)?;
+
+            Ok(URI(s))
+        }
+    }
+
+    impl Serialize for URI {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("URI", self.as_str())
+        }
+    }
+}
+
+#[cfg(use_url_crate)]
 pub mod uri {
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
@@ -218,7 +261,7 @@ pub mod regex {
         }
     }
 
-    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer};
 
     impl<'de> Deserialize<'de> for REGEX {

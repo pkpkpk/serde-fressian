@@ -33,7 +33,7 @@ maplit = "1.0.1"
 debug = true
 
 [features]
-default = ["url"]
+default = []
 use_regex_crate = ["regex"]
 use_uuid_crate = ["uuid"]
 use_url_crate = ["url"]

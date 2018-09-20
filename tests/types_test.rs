@@ -10,7 +10,7 @@ extern crate serde;
 extern crate serde_bytes;
 extern crate serde_fressian;
 // extern crate uuid as _uuid;
-extern crate url;
+// extern crate url;
 // extern crate regex as _regex;
 // extern crate chrono;
 
@@ -60,26 +60,26 @@ fn inst_test(){
 //     assert_eq!(*test_value, control_value);
 // }
 
-#[test]
-fn uri_test(){
-    use url::{Url, Host};
-    use serde_fressian::uri::{URI};
-
-    // "https://www.youtube.com/watch?v=xvhQitzj0zQ"
-    let control_bytes: Vec<u8> = vec![197,227,43,104,116,116,112,115,58,47,47,119,119,119,46,121,111,117,116,117,98,101,46,99,111,109,47,119,97,116,99,104,63,118,61,120,118,104,81,105,116,122,106,48,122,81];
-    let control_value: Url = Url::parse("https://www.youtube.com/watch?v=xvhQitzj0zQ").unwrap();
-
-    let test_value: URI = serde_fressian::de::from_vec(&control_bytes).unwrap();
-    assert_eq!(*test_value, control_value);
-
-    let mut fw = Serializer::from_vec(Vec::new());
-    URI::from_Url(control_value.clone()).serialize(&mut fw).unwrap();
-    let buf = fw.to_vec();
-    assert_eq!(buf, control_bytes);
-    let test_value: URI = serde_fressian::de::from_vec(&buf).unwrap();
-    assert_eq!(test_value.as_str(), control_value.as_str());
-    assert_eq!(test_value.as_str(), "https://www.youtube.com/watch?v=xvhQitzj0zQ");
-}
+// #[test]
+// fn uri_test(){
+//     use url::{Url, Host};
+//     use serde_fressian::uri::{URI};
+//
+//     // "https://www.youtube.com/watch?v=xvhQitzj0zQ"
+//     let control_bytes: Vec<u8> = vec![197,227,43,104,116,116,112,115,58,47,47,119,119,119,46,121,111,117,116,117,98,101,46,99,111,109,47,119,97,116,99,104,63,118,61,120,118,104,81,105,116,122,106,48,122,81];
+//     let control_value: Url = Url::parse("https://www.youtube.com/watch?v=xvhQitzj0zQ").unwrap();
+//
+//     let test_value: URI = serde_fressian::de::from_vec(&control_bytes).unwrap();
+//     assert_eq!(*test_value, control_value);
+//
+//     let mut fw = Serializer::from_vec(Vec::new());
+//     URI::from_Url(control_value.clone()).serialize(&mut fw).unwrap();
+//     let buf = fw.to_vec();
+//     assert_eq!(buf, control_bytes);
+//     let test_value: URI = serde_fressian::de::from_vec(&buf).unwrap();
+//     assert_eq!(test_value.as_str(), control_value.as_str());
+//     assert_eq!(test_value.as_str(), "https://www.youtube.com/watch?v=xvhQitzj0zQ");
+// }
 
 // #[test]
 // fn regex_test(){
