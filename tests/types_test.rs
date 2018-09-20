@@ -9,7 +9,7 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_bytes;
 extern crate serde_fressian;
-extern crate uuid as _uuid;
+// extern crate uuid as _uuid;
 extern crate url;
 // extern crate regex as _regex;
 // extern crate chrono;
@@ -40,25 +40,25 @@ fn inst_test(){
     assert_eq!(i.to_millis(), 1535328836181)
 }
 
-#[test]
-fn uuid_test(){
-    use serde_fressian::uuid::{UUID};
-    use _uuid::Uuid;
-
-    // #uuid "c8bf117b-8ee4-4e74-8c1f-51df0a757fe8"
-    let control_value =  Uuid::parse_str("c8bf117b-8ee4-4e74-8c1f-51df0a757fe8").unwrap();
-    let control_bytes: Vec<u8> = vec![195,217,16,200,191,17,123,142,228,78,116,140,31,81,223,10,117,127,232];
-
-    let test_value: UUID = serde_fressian::de::from_vec(&control_bytes).unwrap();
-    assert_eq!(*test_value, control_value);
-
-    let mut fw = Serializer::from_vec(Vec::new());
-    UUID::from_Uuid(control_value).serialize(&mut fw).unwrap();
-    let buf = fw.to_vec();
-    assert_eq!(buf, control_bytes);
-    let test_value: UUID = serde_fressian::de::from_vec(&buf).unwrap();
-    assert_eq!(*test_value, control_value);
-}
+// #[test]
+// fn uuid_test(){
+//     use serde_fressian::uuid::{UUID};
+//     use _uuid::Uuid;
+//
+//     // #uuid "c8bf117b-8ee4-4e74-8c1f-51df0a757fe8"
+//     let control_value =  Uuid::parse_str("c8bf117b-8ee4-4e74-8c1f-51df0a757fe8").unwrap();
+//     let control_bytes: Vec<u8> = vec![195,217,16,200,191,17,123,142,228,78,116,140,31,81,223,10,117,127,232];
+//
+//     let test_value: UUID = serde_fressian::de::from_vec(&control_bytes).unwrap();
+//     assert_eq!(*test_value, control_value);
+//
+//     let mut fw = Serializer::from_vec(Vec::new());
+//     UUID::from_Uuid(control_value).serialize(&mut fw).unwrap();
+//     let buf = fw.to_vec();
+//     assert_eq!(buf, control_bytes);
+//     let test_value: UUID = serde_fressian::de::from_vec(&buf).unwrap();
+//     assert_eq!(*test_value, control_value);
+// }
 
 #[test]
 fn uri_test(){

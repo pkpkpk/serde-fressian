@@ -8,12 +8,11 @@ keywords = [
     "clojurescript",
     "wasm"
 ]
-license = "Apache-2.0/MIT"
+license = "MIT"
 readme = "./README.md"
 repository = "https://github.com/pkpkpk/serde-fressian"
 
 [dependencies]
-serde_json = "1.0" # https://github.com/rust-lang/cargo/issues/1982
 serde = "1.0.71"
 serde_derive = "1.0.70"
 serde_bytes = "0.10.4"
@@ -34,7 +33,7 @@ maplit = "1.0.1"
 debug = true
 
 [features]
-default = ["uuid", "url"]
+default = ["url"]
 use_regex_crate = ["regex"]
 use_uuid_crate = ["uuid"]
 use_url_crate = ["url"]

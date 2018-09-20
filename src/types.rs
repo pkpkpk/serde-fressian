@@ -70,9 +70,53 @@ pub mod inst {
     }
 }
 
+#[cfg(not(use_regex_crate))]
+pub mod uuid {
+    use serde::de::{Deserializer, Deserialize};
+    use serde::ser::{Serialize, Serializer};
+    use serde_bytes::ByteBuf;
+
+    #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
+    pub struct UUID (ByteBuf);
+
+    impl UUID {
+        pub fn into_inner(self) -> ByteBuf {
+            self.0
+        }
+
+        #[inline]
+        pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
+            let buf = ByteBuf::from(bytes);
+            Ok(UUID(buf))
+        }
+    }
+
+    impl<'de> Deserialize<'de> for UUID {
+        fn deserialize<D>(deserializer: D) -> Result<UUID, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let buf: ByteBuf = ByteBuf::deserialize(deserializer)?;
+
+            Ok(UUID(buf))
+        }
+    }
+
+    impl Serialize for UUID {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let bytes: &[u8] = self.0.as_ref();
+            let buf = ByteBuf::from(bytes);
+            serializer.serialize_newtype_struct("UUID", &buf)
+        }
+    }
+}
+
+#[cfg(use_regex_crate)]
 pub mod uuid {
 
-    use serde::de::{Deserializer, Deserialize, Error};
+    use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer};
     use serde_bytes::ByteBuf;
 
@@ -82,7 +126,7 @@ pub mod uuid {
     pub struct UUID (Uuid);
 
     impl UUID {
-        pub fn from_Uuid(u: Uuid) -> Self {
+        pub fn from_uuid(u: Uuid) -> Self {
             UUID(u)
         }
         pub fn into_inner(self) -> Uuid {

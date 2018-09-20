@@ -1,5 +1,6 @@
 #![feature(extern_prelude)]
 #![cfg_attr(feature= "use_regex_crate", use_regex_crate)]
+#![cfg_attr(feature= "use_uuid_crate", use_uuid_crate)]
 
 extern crate itertools;
 
@@ -16,7 +17,9 @@ extern crate ordered_float;
 #[cfg(use_regex_crate)]
 extern crate regex as _regex;
 
+#[cfg(use_uuid_crate)]
 extern crate uuid as _uuid;
+
 extern crate url;
 // extern crate chrono;
 
