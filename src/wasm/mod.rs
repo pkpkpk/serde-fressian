@@ -7,32 +7,47 @@ use error::{self};
 // use serde::de;
 use serde::ser::{Serialize};
 
-/// Transfer ownership of the bytes to javascript, and return a pointer to them.
-/// These bytes are unreachable to rust until they have been returned manually.
-/// see https://doc.rust-lang.org/std/mem/fn.forget.html
+/// Transfer ownership of slice of memory to javascript, and return a pointer.
+///   + This is for giving javascript memory to write into. It assumes the given vec has len == 0
+///     but has some non-zero allocated capacity that javascript requested
+///   + These bytes are unreachable to rust until they have been returned manually.
+///      - see https://doc.rust-lang.org/std/mem/fn.forget.html
 #[inline]
-fn vec_to_js(mut vec: Vec<u8>) -> *mut u8
+fn buffer_to_js(mut vec: Vec<u8>) -> *mut u8
 {
+    assert_eq!(0, vec.len());
     let ptr = vec.as_mut_ptr();
-    // let len = vec.len();
+    mem::forget(vec);
+    ptr
+}
+
+/// Transfer ownership of slice of _bytes_ to javascript, and return a pointer.
+///   + This is for giving javascript bytes to read. It differs from `buffer_to_js` only in that it
+///     calls `vec.shrink_to_fit()` which trims off excess capacity to prevent a leak.
+///   + These bytes are unreachable to rust until they have been returned manually.
+///      - see https://doc.rust-lang.org/std/mem/fn.forget.html
+#[inline]
+fn bytes_to_js(mut vec: Vec<u8>) -> *mut u8
+{
+    vec.shrink_to_fit();
+    let ptr = vec.as_mut_ptr();
     mem::forget(vec);
     ptr
 }
 
 /// for js consumers: request memory of the given byte length and return a pointer to it
 #[no_mangle]
-pub extern "C" fn fress_alloc(size: usize) -> *mut u8
+pub extern "C" fn fress_alloc(byte_len: usize) -> *mut u8
 {
-    let buf = Vec::with_capacity(size);
-    vec_to_js(buf)
+    buffer_to_js(Vec::with_capacity(byte_len))
 }
 
 /// for js consumers: return ownership of the bytes back to rust and drop them
 #[no_mangle]
-pub extern "C" fn fress_dealloc(ptr: *mut u8, len: usize)
+pub extern "C" fn fress_dealloc(ptr: *mut u8, cap: usize)
 {
     let _buf: Vec<u8> =  unsafe {
-        Vec::from_raw_parts(ptr, len, len)
+        Vec::from_raw_parts(ptr, cap, cap)
     };
 }
 
@@ -45,7 +60,7 @@ pub extern "C" fn fress_dealloc(ptr: *mut u8, len: usize)
 pub fn to_js<S: Serialize>(value: S) -> *mut u8
 {
     let vec: Vec<u8> = ser::to_vec(&value).unwrap_or_else(|err| ser::to_vec(&err).unwrap());
-    vec_to_js(vec)
+    bytes_to_js(vec)
 }
 
 /// Given a pointer and length from javascript, deserialize fressian bytes to rust data structures.
