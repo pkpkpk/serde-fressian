@@ -76,3 +76,24 @@ where
     let mut deserializer = de::Deserializer::from_bytes(bytes);
     T::deserialize(&mut deserializer)
 }
+
+
+use std::panic;
+
+extern {
+    fn js_panic_hook(ptr: *mut u8);
+}
+
+pub fn hook(info: &panic::PanicInfo) {
+    let msg: String = info.to_string();
+    unsafe {
+        js_panic_hook(to_js(msg))
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn fress_init() {
+    panic::set_hook(Box::new(hook));
+}
+
+
