@@ -365,23 +365,12 @@ pub mod sym {
     use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
 
-    // TODO investigate https://github.com/mozilla/mentat/blob/master/edn/src/symbols.rs
-    // going simple for now
-    // not clear if any advantages to full struct
     #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
     pub struct SYM(Option<String>,String);
-    // pub struct SYM {
-    //     namespace: String,
-    //     name: String
-    // }
 
     impl SYM {
         pub fn new(namespace: Option<String>, name: String) -> Self {
             SYM(namespace, name)
-            // SYM {
-            //     namespace: namespace,
-            //     name: name
-            // }
         }
         pub fn simple(name: String) -> Self {
             SYM(None, name)
@@ -395,9 +384,8 @@ pub mod sym {
         fn deserialize<D>(deserializer: D) -> Result<SYM, D::Error>
             where D: Deserializer<'de>,
         {
-            // is vector right way to do this?
-            // [namespace, name]
-            let mut v: Vec< Option<String> > = Vec::deserialize(deserializer)?;
+            // this probably could be a tuple(Option<String>, String)
+            let mut v: Vec<Option<String>> = Vec::deserialize(deserializer)?;
 
             let name: Option<Option<String>> = v.pop();
             let namespace: Option<Option<String>> = v.pop();
@@ -679,7 +667,7 @@ pub mod set {
 
     use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer};
-    use std::collections::{BTreeSet};
+    use std::collections::{BTreeSet, HashSet};
     use std::cmp::{Ord};
 
     #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
@@ -721,6 +709,48 @@ pub mod set {
             let v: BTreeSet<T> = BTreeSet::deserialize(deserializer)?;
 
             Ok(SET::from(v))
+        }
+    }
+
+    #[derive(Shrinkwrap,Clone)]
+    pub struct HASHSET<T>(HashSet<T>);
+
+    impl<T> HASHSET<T> {
+        pub fn into_inner(self) -> HashSet<T> {
+            self.0
+        }
+    }
+
+    impl<T> From<HashSet<T>> for HASHSET<T>
+        where T: Serialize + Ord,
+    {
+        #[inline]
+        fn from(val: HashSet<T>) -> HASHSET<T> {
+            HASHSET(val)
+        }
+    }
+
+    impl<T> Serialize for HASHSET<T>
+        where T: Serialize + Ord + std::hash::Hash,
+    {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+
+        {
+            serializer.serialize_newtype_struct("SET", &self.0)
+        }
+    }
+
+    impl<'de,T> Deserialize<'de> for HASHSET<T>
+        where T: Deserialize<'de> + Ord + Serialize + std::hash::Hash,
+    {
+        fn deserialize<D>(deserializer: D) -> Result<HASHSET<T>, D::Error>
+            where D: Deserializer<'de>,
+        {
+            let v: HashSet<T> = HashSet::deserialize(deserializer)?;
+
+            Ok(HASHSET::from(v))
         }
     }
 }
