@@ -4,17 +4,17 @@
 |------------|------|---------|------|
 | NULL       |  ()/None  | nil     | nil  
 | TRUE/FALSE | bool | bool | bool
-| INT        | i64  | Number* | Long
+| INT        | i64  | Number | Long
 | FLOAT      | f32  | Number | Float
 | DOUBLE     | f64  | Number | Double
-| BYTES      | serde_bytes::ByteBuf | Int8Array | byte[]
+| BYTES      | [serde_bytes::ByteBuf][serde_bytes] | Int8Array | byte[]
 | STRING     | string       | string | string
 | UTF8*      | string       | string | string
 | LIST       | Vec&lt;T&gt; | vec    | vec
-| MAP        | map*         | map    | map
-| SET        | types::SET*  | set    | set
-| SYM        | types::SYM   | sym | sym
-| KEY        | types::KEY   | kw | kw
+| MAP        | map          | map    | map
+| SET        | types::SET   | set    | set
+| SYM        | types::SYM   | sym   | sym
+| KEY        | types::KEY   | kw    | kw
 | INST       | types::INST  | #inst | #inst
 | UUID       | types::UUID  | #UUID |#UUID
 | REGEX      | types::REGEX | regex | regex
@@ -50,21 +50,28 @@ let output = ser::to_vec(&bb).unwrap(); //--> serialized as BYTES
 ```
 #### `serde_fressian::set`
 
-This module provides a wrapper for BTreeSets. `serde_fressian` prefers BTreeSets over HashSets because the former implements Hash on the Set container itself. The same is true for BtreeMaps vs HashMaps. Hashing the container itself is required for implementing `serde_fressian::value` (see below) because it enables using the containers themselves as keys (..or set values), which may show up in that crazy clojure data.
+This module provides the `set::SET` wrapper for BTreeSets and `set::HASHSET` for HashSets. `serde_fressian` prefers BTreeSets over HashSets because the former implements Hash on the Set container itself. The same is true for BtreeMaps vs HashMaps. Hashing the container itself is required for implementing `serde_fressian::value` (see below) because it enables using the containers themselves as keys (..or set values), which may show up in that crazy clojure data.
 
 ```rust
 #[macro_use]
 extern crate maplit; // provides map & set literals
-use std::collections::{BTreeSet};
+use std::collections::{BTreeSet,HashSet};
+use serde_fressian::set::{SET, HASHSET};
 use serde_fressian::ser;
-use serde_fressian::set::{SET};
 
-let set: BTreeSet<i64> = btreeset!{0,1,2,3};
-let output = ser::to_vec(&set).unwrap(); //--> serialized as LIST
+let btreeset: BTreeSet<i64> = btreeset!{0,1,2,3};
+let output = ser::to_vec(&btreeset); //--> serialized as LIST; [0 1 2 3]
 
-let wrapped_set = SET<i64> = SET::from(set);
-let output = ser::to_vec(&wrapped_set).unwrap(); //--> serialized as SET
+let wrapped_btreeset: SET<i64> = SET::from(btreeset);
+let output = ser::to_vec(&wrapped_btreeset); //--> serialized as SET; #{0 1 2 3}
 
+// SET derives hash from its btreeset, so it can be stored in a hashset if we want
+// but we could not do the other way around.
+let hashset: HashSet<SET<i64>> = hashset!{wrapped_btreeset};
+let output = ser::to_vec(&hashset); //--> serialized as LIST; [#{0 1 2 3}]
+
+let wrapped_hashset: HASHSET<SET<i64>> = HASHSET::from(hashset);
+let output = ser::to_vec(&wrapped_hashset); //--> serialized as SET; #{#{0 1 2 3}}
 ```
 
 #### `serde_fressian::typed_arrays`
@@ -82,23 +89,25 @@ let da: DoubleArray = DoubleArray::from_vec(v);
 let output = ser::to_vec(&da).unwrap(); //--> serialized as DOUBLE_ARRAY
 ```
 
+#### SYM, KEY
+As you would expect, symbols and keywords do not have analogous rust types. The `serde_fressian::sym::{SYM}` and `serde_fressian::key::{KEY}` types are provided for compatibility. They are both tuple structs composed of an `Option<String>` namespace and a `String` Name. They have no other built-in functionality outside of lossless serialization.
 
 
+#### Extended Types
+With the expectation that they will be less commonly used, the remaining types default to newtypes over primitives in the interest of keeping binaries small. You can use compiler flags to enable extra functionality provided by external crates:
 
-
-#### Other Newtypes
-`serde_fressian::sym::{SYM}`
-`serde_fressian::key::{KEY}`
-
-
-`use serde_fressian::regex::{REGEX};`
-`use serde_fressian::uri::{URI};`
-`use serde_fressian::uuid::{UUID};`
-`use serde_fressian::inst::{INST};`
-
-
-
-
++ `serde_fressian::regex::{REGEX}`
+  - by default is just a newtype around `String`
+  - compile with the `use_regex_crate` to enable the external [regex crate][reg]
++ `serde_fressian::uri::{URI}`
+  - by default is just a newtype around `String`
+  - compile with the `use_url_crate` to enable the external [url crate][url]
++ `serde_fressian::uuid::{UUID}`
+  - by default is just a newtype around `ByteBuf`
+  - compile with the `use_uuid_crate` to enable the external [uuid crate][uuid]
++ `serde_fressian::inst::{INST}`
+  - by default is just a newtype around `i64`
+  - TODO: support the [chrono crate][chrono]
 
 
 #### Using Serde Attributes

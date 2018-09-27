@@ -3,6 +3,8 @@
 #![allow(non_snake_case)]
 #![feature(custom_attribute)]
 
+#[macro_use]
+extern crate maplit;
 
 #[macro_use]
 extern crate serde_derive;
@@ -14,7 +16,7 @@ extern crate serde_fressian;
 // extern crate regex as _regex;
 // extern crate chrono;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, BTreeSet, BTreeMap};
 use serde::de::{Deserialize};
 use serde::Serialize;
 
@@ -194,6 +196,40 @@ fn typed_arrays_test(){
     assert_eq!(test_bytes, control_bytes);
     assert_eq!(control_value,serde_fressian::de::from_vec(&test_bytes).unwrap());
 }
-//f32
-//i64
+
+#[test]
+fn sets(){
+    use serde_fressian::set::{SET, HASHSET};
+    use serde_fressian::ser;
+
+    let btreeset: BTreeSet<i64> = btreeset!{0,1,2,3};
+    let output = ser::to_vec(&btreeset); //--> serialized as LIST; [0 1 2 3]
+
+    let control_bytes: Vec<u8> = vec![232,0,1,2,3];
+    assert_eq!(output.unwrap(), control_bytes);
+
+    let wrapped_btreeset: SET<i64> = SET::from(btreeset);
+    let output = ser::to_vec(&wrapped_btreeset); //--> serialized as SET; #{0 1 2 3}
+
+    let control_bytes: Vec<u8> = vec![193,232,0,1,2,3];
+    assert_eq!(output.unwrap(), control_bytes);
+
+    // SET derives hash from its btreeset, so it can be stored in a hashset if we want
+    // but we could not do the other way around.
+    let hashset: HashSet<SET<i64>> = hashset!{wrapped_btreeset};
+    let output = ser::to_vec(&hashset); //--> serialized as LIST; [#{0 1 2 3}]
+
+    //this may have nondet ordering
+    let control_bytes: Vec<u8> = vec![229,193,232,0,1,2,3];
+    assert_eq!(output.unwrap(), control_bytes);
+
+    let wrapped_hashset: HASHSET<SET<i64>> = HASHSET::from(hashset);
+    let output = ser::to_vec(&wrapped_hashset); //--> serialized as SET; #{#{0 1 2 3}}
+
+    //this may have nondet ordering
+    let control_bytes: Vec<u8> = vec![193,229,193,232,0,1,2,3];
+    assert_eq!(output.unwrap(), control_bytes);
+}
+
+
 //need serde 'with' attribute tests
