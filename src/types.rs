@@ -362,10 +362,9 @@ pub mod regex {
 
 pub mod sym {
 
-    use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
 
-    #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
+    #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq,Deserialize)]
     pub struct SYM(Option<String>,String);
 
     impl SYM {
@@ -377,25 +376,6 @@ pub mod sym {
         }
         pub fn namespaced(namespace: String, name: String) -> Self {
             SYM(Some(namespace), name)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for SYM {
-        fn deserialize<D>(deserializer: D) -> Result<SYM, D::Error>
-            where D: Deserializer<'de>,
-        {
-            // this probably could be a tuple(Option<String>, String)
-            let mut v: Vec<Option<String>> = Vec::deserialize(deserializer)?;
-
-            let name: Option<Option<String>> = v.pop();
-            let namespace: Option<Option<String>> = v.pop();
-
-            match (namespace,name) {
-                (Some(namespace_opt),Some(Some(name_string))) => {
-                    Ok(SYM::new(namespace_opt, name_string))
-                }
-                _ => Err(Error::custom("bad symbol"))
-            }
         }
     }
 
@@ -419,11 +399,10 @@ pub mod sym {
 
 pub mod key {
 
-    use serde::de::{Deserializer, Deserialize, Error};
     use serde::ser::{Serialize, Serializer};
 
     //same as SYM above
-    #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
+    #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq, Deserialize)]
     pub struct KEY(Option<String>,String);
 
     impl KEY {
@@ -435,25 +414,6 @@ pub mod key {
         }
         pub fn namespaced(namespace: String, name: String) -> Self {
             KEY(Some(namespace), name)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for KEY {
-        fn deserialize<D>(deserializer: D) -> Result<KEY, D::Error>
-            where D: Deserializer<'de>,
-        {
-            // [namespace, name]
-            let mut v: Vec< Option<String>> = Vec::deserialize(deserializer)?;
-
-            let name: Option<Option<String>> = v.pop();
-            let namespace: Option<Option<String>> = v.pop();
-
-            match (namespace,name) {
-                (Some(namespace_opt),Some(Some(name_string))) => {
-                    Ok(KEY::new(namespace_opt, name_string))
-                }
-                _ => Err(Error::custom("bad keyword"))
-            }
         }
     }
 
@@ -665,15 +625,14 @@ pub mod typed_arrays {
 
 pub mod set {
 
-    use serde::de::{Deserializer, Deserialize};
     use serde::ser::{Serialize, Serializer};
     use std::collections::{BTreeSet, HashSet};
     use std::cmp::{Ord};
 
-    #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
-    pub struct SET<T>(BTreeSet<T>);
+    #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq, Deserialize)]
+    pub struct SET<T: Ord>(BTreeSet<T>);
 
-    impl<T> SET<T> {
+    impl<T: Ord> SET<T> {
         pub fn into_inner(self) -> BTreeSet<T> {
             self.0
         }
@@ -700,29 +659,18 @@ pub mod set {
         }
     }
 
-    impl<'de,T> Deserialize<'de> for SET<T>
-        where T: Deserialize<'de> + Ord + Serialize,
-    {
-        fn deserialize<D>(deserializer: D) -> Result<SET<T>, D::Error>
-            where D: Deserializer<'de>,
-        {
-            let v: BTreeSet<T> = BTreeSet::deserialize(deserializer)?;
+    use std::hash::Hash;
 
-            Ok(SET::from(v))
-        }
-    }
+    #[derive(Shrinkwrap,Clone,Deserialize)]
+    pub struct HASHSET<T: Ord + Hash>(HashSet<T>);
 
-    #[derive(Shrinkwrap,Clone)]
-    pub struct HASHSET<T>(HashSet<T>);
-
-    impl<T> HASHSET<T> {
+    impl<T: Ord + Hash> HASHSET<T> {
         pub fn into_inner(self) -> HashSet<T> {
             self.0
         }
     }
 
-    impl<T> From<HashSet<T>> for HASHSET<T>
-        where T: Serialize + Ord,
+    impl<T: Ord + Hash> From<HashSet<T>> for HASHSET<T>
     {
         #[inline]
         fn from(val: HashSet<T>) -> HASHSET<T> {
@@ -739,18 +687,6 @@ pub mod set {
 
         {
             serializer.serialize_newtype_struct("SET", &self.0)
-        }
-    }
-
-    impl<'de,T> Deserialize<'de> for HASHSET<T>
-        where T: Deserialize<'de> + Ord + Serialize + std::hash::Hash,
-    {
-        fn deserialize<D>(deserializer: D) -> Result<HASHSET<T>, D::Error>
-            where D: Deserializer<'de>,
-        {
-            let v: HashSet<T> = HashSet::deserialize(deserializer)?;
-
-            Ok(HASHSET::from(v))
         }
     }
 }

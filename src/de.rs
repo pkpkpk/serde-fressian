@@ -276,15 +276,15 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     serde::forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
         bytes byte_buf unit unit_struct seq map struct identifier ignored_any
-        enum newtype_struct
-        // option tuple tuple_struct
+        enum
+        // option tuple tuple_struct newtype_struct
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
         where
             V: Visitor<'de>,
     {
-        match self.peek_next_code()? as u8 {
+        match self.peek_next_code()? as u8 { // need peek until type code/////////////////////////////////////////
             codes::NULL => {
                 let _ = self.read_next_code()?;
                 visitor.visit_none()
@@ -306,7 +306,40 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 // should this be read?
                 visitor.visit_i8(self.peek_next_code()?)
             }
+            "KEY" => {
+                // strongly typed deserializing assumes we are already
+                // at component data where as weakly typed will have
+                // already read off this code
+                if self.peek_next_code()? as u8 == codes::KEY {
+                    self.read_next_code()?;
+                }
+                visitor.visit_seq(FixedListReader::new(self, 2))
+            }
+            "SYM" => {
+                // same as above
+                if self.peek_next_code()? as u8 == codes::SYM {
+                    self.read_next_code()?;
+                }
+                visitor.visit_seq(FixedListReader::new(self, 2))
+            }
+
             _ => self.deserialize_seq(visitor)
+        }
+    }
+
+    fn deserialize_newtype_struct<V>(self, name: &'static str, visitor: V) -> Result<V::Value>
+    where
+        V: Visitor<'de>,
+    {
+        match name {
+            "SET" |"HASHSET" => {
+                // same as key, sym above
+                if self.peek_next_code()? as u8 == codes::SET {
+                    self.read_next_code()?;
+                }
+                visitor.visit_newtype_struct(self)
+            }
+            _ => visitor.visit_newtype_struct(self)
         }
     }
 
