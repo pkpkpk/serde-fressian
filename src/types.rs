@@ -472,6 +472,16 @@ pub mod typed_arrays {
         }
     }
 
+    pub mod int_array {
+        use serde::ser::{Serializer};
+
+        pub fn serialize<S>(vec: &Vec<i32>, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("INT_ARRAY", vec)
+        }
+    }
 
     #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
     pub struct LongArray (Vec<i64>);
@@ -505,6 +515,17 @@ pub mod typed_arrays {
             S: Serializer,
         {
             serializer.serialize_newtype_struct("LONG_ARRAY", &self.0)
+        }
+    }
+
+    pub mod long_array {
+        use serde::ser::{Serializer};
+
+        pub fn serialize<S>(vec: &Vec<i64>, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("LONG_ARRAY", vec)
         }
     }
 
@@ -548,6 +569,17 @@ pub mod typed_arrays {
         }
     }
 
+    pub mod float_array {
+        use serde::ser::{Serializer};
+
+        pub fn serialize<S>(vec: &Vec<f32>, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("FLOAT_ARRAY", vec)
+        }
+    }
+
     #[derive(Shrinkwrap, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
     pub struct DoubleArray (Vec<OrderedFloat<f64>>);
 
@@ -586,6 +618,17 @@ pub mod typed_arrays {
         }
     }
 
+    pub mod double_array {
+        use serde::ser::{Serializer};
+
+        pub fn serialize<S>(vec: &Vec<f64>, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("DOUBLE_ARRAY", vec)
+        }
+    }
+
 
     #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
     pub struct BooleanArray (Vec<bool>);
@@ -619,6 +662,17 @@ pub mod typed_arrays {
             S: Serializer,
         {
             serializer.serialize_newtype_struct("BOOLEAN_ARRAY", &self.0)
+        }
+    }
+
+    pub mod boolean_array {
+        use serde::ser::{Serializer};
+
+        pub fn serialize<S>(vec: &Vec<bool>, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_newtype_struct("BOOLEAN_ARRAY", vec)
         }
     }
 }
