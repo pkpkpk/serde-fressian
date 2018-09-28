@@ -200,7 +200,6 @@ fn typed_arrays_test(){
 #[test]
 fn sets(){
     use serde_fressian::set::{SET, HASHSET};
-    use serde_fressian::ser;
 
     let btreeset: BTreeSet<i64> = btreeset!{0,1,2,3};
     let output = ser::to_vec(&btreeset); //--> serialized as LIST; [0 1 2 3]
@@ -231,5 +230,38 @@ fn sets(){
     assert_eq!(output.unwrap(), control_bytes);
 }
 
+#[test]
+fn attributes_with_test(){
+    use serde_fressian::set::{SET, HASHSET};
 
-//need serde 'with' attribute tests
+
+    // without with attribute, written as list
+    #[derive(Serialize)]
+    struct Stuff {
+        set: HashSet<String>,
+    }
+
+    let stuff = Stuff{set: hashset!{"bonjour".to_string()}};
+    // (write {"set" ["bonjour"]})
+    let control_bytes: Vec<u8> = vec![192,230,221,115,101,116,229,225,98,111,110,106,111,117,114];
+    let output = ser::to_vec(&stuff);
+    assert_eq!(output.unwrap(), control_bytes);
+
+
+    #[derive(Serialize)]
+    struct OtherStuff {
+        #[serde(with = "serde_fressian::set")]
+        hset: HashSet<String>,
+        #[serde(with = "serde_fressian::set")]
+        bset: BTreeSet<String>
+    }
+    let other_stuff = OtherStuff{
+        hset: hashset!{"bonjour".to_string()},
+        bset: btreeset!{"au revoir".to_string()},
+    };
+    // (write {"hset" #{"bonjour"} "bset" #{"au revoir"}})
+    let control_bytes: Vec<u8> = vec![192,232,222,104,115,101,116,193,229,225,98,111,110,106,111,117,114,222,98,115,101,116,193,229,227,9,97,117,32,114,101,118,111,105,114];
+
+    let output = ser::to_vec(&other_stuff);
+    assert_eq!(output.unwrap(), control_bytes);
+}

@@ -627,7 +627,17 @@ pub mod set {
 
     use serde::ser::{Serialize, Serializer};
     use std::collections::{BTreeSet, HashSet};
+    use std::hash::Hash;
     use std::cmp::{Ord};
+
+    pub fn serialize<I, V, S>(set: &I, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        V: Serialize + Eq + Hash,
+        I: IntoIterator<Item = V> + Serialize,
+        S: Serializer,
+    {
+        serializer.serialize_newtype_struct("SET", set)
+    }
 
     #[derive(Shrinkwrap,Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq, Deserialize)]
     pub struct SET<T: Ord>(BTreeSet<T>);
@@ -658,8 +668,6 @@ pub mod set {
             serializer.serialize_newtype_struct("SET", &self.0)
         }
     }
-
-    use std::hash::Hash;
 
     #[derive(Shrinkwrap,Clone,Deserialize)]
     pub struct HASHSET<T: Ord + Hash>(HashSet<T>);
