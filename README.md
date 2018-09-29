@@ -3,68 +3,61 @@ Fressian is a self-describing binary serialization format developed for clojure.
 
 ## wasm⥪fressian⥭cljs
 
-When compiled for WebAssembly, serde-fressian can be used to convey rich values to and from clojurescript. For more info see [serde-fressian-wasm-demo/README.md](serde-fressian-wasm-demo/README.md)
+When compiled for WebAssembly, serde-fressian can be used to convey rich values to and from clojurescript.
 
-## About
+#### serde-fressian has 2 companion projects:
+  + [fress](https://github.com/pkpkpk/fress)
+    - an implementation of Fressian for clojurescript designed to interface with serde-fressian's wasm api from javascript.
+  + [cargo-cljs](https://github.com/pkpkpk/cargo-cljs)
+    - a clojurescript library for scripting cargo via nodejs
 
-## WIP
+#### A WIP
+  + No records, BIGINT, BIGDEC, OBJECT_ARRAY, char
+  + No caching except for the types that require it
+  + No checksum/validation
+  + serde::fressian::value needs own Deserializer/Serializer impls
+  + plenty of wasm specific optimizations yet to implement
 
-### TODO
-+ ~~restore footer~~
-+ value
-  - rt all types
-  - indexing
-+ STR, write only for serde, read-only for fress
-+ wasm API
-  - lock/release
-  - exported write_byte
-  - exported reset() method
-  - caching, footer ergonomics
-  - usage patterns
-+ fix nonsensical error types
-+ records
-+ Char
-+ BIGINT
-  - crate use num::BigInt;
-+ BIGDEC
-+ OBJECT_ARRAY
-+ uncompressed typed arrays, ints
-+ TaggedObjects , structs
-+ deserializing chunked strings & bytes not implemented yet
-+ caching
-  - ser
-    - put cache
-    - hopmap
-  - de
-    - get cache
-+ checksum
-+ type profiles (no inst etc)
-+ document integers safety
-+ identify lossy types
-+ raw utf8 flag
-+ serde limitations
-  - using newtype attr flags
-+ SET, MAP
+#### Usage
 
-+ basic caching copies. What about caching references? new fressian type? see rust's bincode
+serde-fressian tries to follow the standard serde conventions. Deserializers can accept readers, vecs, and slices. Serializers at this time however only support writing to vecs.
+
+```rust
+use serde_fressian::ser;
+use serde_fressian::de;
+
+let write_data: Vec<String> = vec!["some".to_string(), "strings".to_string()];
+
+let bytes: Vec<u8> = ser::to_vec(&data).unwrap();
+
+// this is strongly typed deserialization
+let read_data: Vec<String> = de::from_vec(&bytes).unwrap();
+
+assert_eq!(write_data,read_data)
+```
+
+If you know ahead of time what the bytes are going to contain, you can use strongly typed deserialization to extract your values. This is less flexible but is *very* fast. If you are unsure of the content, `serde_fressian::value::Value` is an enum encompassing all fressian types and will deserialize values as they are described.
+
+```rust
+use serde_fressian::ser;
+use serde_fressian::de;
+use serde_fressian::value::{Value};
+
+let write_data: Vec<String> = vec!["some".to_string(), "strings".to_string()];
+
+let bytes: Vec<u8> = ser::to_vec(&data).unwrap();
+
+// this is weakly typed deserialization
+let read_data: Value = de::from_vec(&bytes).unwrap();
+
+// Value::LIST(vec![Value::STRING("some".to_string()),Value::STRING("strings".to_string())])
+assert_eq!(read_data, Value::from(write_data))
+
+```
 
 
 
-## Fress TODO
-+ `api/reset`
-+ need `*write-raw-utf8*` binding from api namespace (make default? goog-define?)
-+ byte-stream alloc w/ with_capacity
-+ uncompressed ints, typed arrays
-+ empty string test for both fressian strings and utf8
-+ array-seq for all native typed arrays
-+ fress-js
-+ document checksum changes
-
-## Serde for Clojurists
-  + strongly typed
-  + weakly typed
-  + serde types
-  + derive
-  + using with attr on wrappers a la serde_bytes
+#### About Fressian
+[Fressian](https://github.com/Datomic/fressian) was designed by [Stuart Halloway](https://twitter.com/stuarthalloway) and the good people of Cognitect. There is a clojure wrapper [here](https://github.com/clojure/data.fressian). There is a design talk [here](https://www.youtube.com/watch?v=JArZqMqsaB0).
 
 
