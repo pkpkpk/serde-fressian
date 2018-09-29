@@ -15,7 +15,7 @@ When compiled for WebAssembly, serde-fressian can be used to convey rich values 
   + No records, BIGINT, BIGDEC, OBJECT_ARRAY, char
   + No caching except for the types that require it
   + No checksum/validation
-  + serde::fressian::value needs own Deserializer/Serializer impls
+  + serde::fressian::value needs own Deserializer/Serializer impls, indexing, identity predicates
   + plenty of wasm specific optimizations yet to implement
 
 #### Usage
@@ -55,6 +55,30 @@ assert_eq!(read_data, Value::from(write_data))
 
 ```
 
+#### Wasm API
+
+The `serde_fressian::wasm` module is designed to interop with [fress.wasm](https://github.com/pkpkpk/fress/blob/master/src/main/cljs/fress/wasm.cljs)
+
+```rust
+use serde_fressian::error::{Error as FressError};
+use serde_fressian::value::{self, Value};
+use serde_fressian::wasm::{self};
+
+
+// called by javascript with ptr to written bytes
+#[no_mangle]
+pub extern "C" fn echo(ptr: *mut u8, len: usize) -> *mut u8
+{
+    // read a value from javascript
+    let val: Result<Value, FressError> = wasm::from_ptr(ptr, len);
+
+    // from_ptr borrows, Value copies. So must own and free bytes separately
+    wasm::fress_dealloc(ptr, len);
+
+    //serializes the result, hands ownership of resulting bytes over to js
+    wasm::to_js(val)
+}
+```
 
 
 #### About Fressian
