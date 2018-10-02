@@ -1,4 +1,3 @@
-#![feature(extern_prelude)]
 #![cfg_attr(feature= "use_regex_crate", use_regex_crate)]
 #![cfg_attr(feature= "use_uuid_crate", use_uuid_crate)]
 #![cfg_attr(feature= "use_url_crate", use_url_crate)]
