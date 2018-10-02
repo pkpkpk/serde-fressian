@@ -59,7 +59,10 @@ pub extern "C" fn fress_dealloc(ptr: *mut u8, cap: usize)
 ///     with an error code and picked up by the fress client as such
 pub fn to_js<S: Serialize>(value: S) -> *mut u8
 {
-    let vec: Vec<u8> = ser::to_vec(&value).unwrap_or_else(|err| ser::to_vec(&err).unwrap());
+    let vec: Vec<u8> = ser::to_vec(&value).unwrap_or_else(|err| {
+        let res: Result<(), error::Error> = Err(err);
+        ser::to_vec(&res).unwrap()
+    });
     bytes_to_js(vec)
 }
 
