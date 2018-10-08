@@ -1,4 +1,4 @@
-# `serde-fressian = "0.1.0"` [![Latest Version]][crates.io]
+# `serde-fressian = "0.1.1"` [![Latest Version]][crates.io]
 Fressian is a self-describing binary serialization format developed for clojure.
 
 [Latest Version]: https://img.shields.io/crates/v/serde-fressian.svg

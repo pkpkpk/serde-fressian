@@ -1,6 +1,6 @@
 [package]
 name = "serde-fressian"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Pat Killean <pat.killean@gmail.com>"]
 description = "Fressian for rust/wasm"
 keywords = [
