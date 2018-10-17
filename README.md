@@ -88,6 +88,6 @@ pub extern "C" fn echo(ptr: *mut u8, len: usize) -> *mut u8
 For my own sanity, most documentation will be over at [fress](https://github.com/pkpkpk/fress)
 
 #### About Fressian
-[Fressian](https://github.com/Datomic/fressian) was designed by [Stuart Halloway](https://twitter.com/stuarthalloway) and the good people of Cognitect. There is a clojure wrapper [here](https://github.com/clojure/data.fressian). There is a design talk [here](https://www.youtube.com/watch?v=JArZqMqsaB0).
+[Fressian](https://github.com/Datomic/fressian) was designed by [Rich Hickey](https://twitter.com/richhickey). There is a clojure wrapper [here](https://github.com/clojure/data.fressian). There is a design talk [here](https://www.youtube.com/watch?v=JArZqMqsaB0).
 
 
