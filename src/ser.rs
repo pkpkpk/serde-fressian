@@ -86,22 +86,12 @@ where
 
     // this will work for narrow fressian types, need to expand Value
     // to handle into_iter, other maps, sets, etc
-    pub fn caching_serialize<V>(&mut self, value: V) -> Result<()>
-        where V: Into<Value> + Serialize + Clone,
+    pub fn caching_serialize<O>(&mut self, object: O) -> Result<()>
+        where O: Into<Value> + Serialize + Clone,
     {
-        // Value::from(value.into()).serialize(CachingSerializer{ser: self})
+        let val: Value = Value::from(object.clone().into());
 
-        //this clones everything that it is given so that it can test the cache
-        // --> this seems unecessary, should be able to borrow, test cache, clone only when unique,
-        let v: Value = Value::from(value.clone().into()); /////////////////////// need refd Vals
-        self.cache_value(value, v)
-    }
-
-    fn cache_value<V>(&mut self, inner: V, val: Value) -> Result<()>
-        where V: Serialize,
-    {
-        let cached_code: Option<u8> = self.cache.get(&val);
-        match cached_code {
+        match self.cache.put(val) {
             Some(code) => {
                 if code < ranges::PRIORITY_CACHE_PACKED_END {
                     self.write_code( code + codes::PRIORITY_CACHE_PACKED_START )
@@ -111,9 +101,8 @@ where
                 }
             }
             None => {
-                let _ = self.cache.put(val);
                 self.write_code(codes::PUT_PRIORITY_CACHE)?;
-                inner.serialize(self)
+                object.serialize(self)
             }
         }
     }

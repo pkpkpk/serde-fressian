@@ -7,11 +7,6 @@ pub struct Cache {
     store: HashMap<Value,u8>
 }
 
-// pub enum Put {
-//     New(u8),
-//     Exists(u8)
-// }
-
 impl Cache {
     pub fn new() -> Self {
         Cache {
@@ -24,18 +19,19 @@ impl Cache {
         self.store.get(val).map(|code: &u8| *code )
     }
 
-    pub fn put(&mut self, val: Value) -> Option<u8> { //bool?
-        let index = self.index;
+    // returns Some(index) if already interned, None if inserted
+    pub fn put(&mut self, val: Value) -> Option<u8> {
         if self.store.contains_key(&val) {
-            None
+            self.get(&val)
         } else {
+            let index = self.index;
             match self.store.insert(val, index) {
                 Some(_) => {
                     None //should never get here
                 }
                 None => {
                     self.index += 1;
-                    Some(index)
+                    None
                 }
             }
         }
