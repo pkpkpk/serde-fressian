@@ -8,17 +8,16 @@ use serde::de::{ self, Deserialize, SeqAccess, Visitor};
 use ordered_float::OrderedFloat;
 use serde_bytes::ByteBuf;
 
-// use error::{Error};
-use imp::codes;
-use value::Value;
-use inst::{INST};
-use uuid::{UUID};
-use uri::{URI};
-use regex::{REGEX};
-use sym::{SYM};
-use key::KEY;
-use typed_arrays::*;
-use set::{SET};
+use crate::imp::codes;
+use crate::value::Value;
+use crate::inst::{INST};
+use crate::uuid::{UUID};
+use crate::uri::{URI};
+use crate::regex::{REGEX};
+use crate::sym::{SYM};
+use crate::key::KEY;
+use crate::typed_arrays::*;
+use crate::set::{SET};
 
 macro_rules! impl_seed {
     ($variant:ident : $T:ident) => {

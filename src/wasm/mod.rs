@@ -1,8 +1,9 @@
 use std::mem;
 
-use de::{self};
-use ser::{self};
-use error::{self};
+use crate::de::{self};
+use crate::ser::{self};
+use crate::error::{self};
+use crate::imp::cache::{Cache};
 
 // use serde::de;
 use serde::ser::{Serialize};
@@ -27,7 +28,7 @@ fn buffer_to_js(mut vec: Vec<u8>) -> *mut u8
 ///   + These bytes are unreachable to rust until they have been returned manually.
 ///      - see https://doc.rust-lang.org/std/mem/fn.forget.html
 #[inline]
-fn bytes_to_js(mut vec: Vec<u8>) -> *mut u8
+pub fn bytes_to_js(mut vec: Vec<u8>) -> *mut u8
 {
     vec.shrink_to_fit();
     let ptr = vec.as_mut_ptr();

@@ -1,8 +1,8 @@
 #![allow(overflowing_literals)]
 
-use imp::codes;
-use imp::io::{ByteReader};
-use error::{Error, ErrorCode, Result};
+use crate::imp::codes;
+use crate::imp::io::{ByteReader};
+use crate::error::{Error, ErrorCode, Result};
 
 use byteorder::*;
 

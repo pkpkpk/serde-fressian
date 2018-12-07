@@ -33,7 +33,7 @@ pub mod value;
 pub mod types;
 pub mod wasm;
 
-pub use types::{
+pub use crate::types::{
     inst,
     uuid,
     uri,
@@ -44,4 +44,4 @@ pub use types::{
     set
 };
 
-
+pub use crate::imp::cache;

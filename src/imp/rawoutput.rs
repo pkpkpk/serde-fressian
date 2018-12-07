@@ -7,10 +7,10 @@
 
 extern crate serde;
 
-use error::{Result};
-use imp::io::{IWriteBytes};
-use imp::codes;
-use imp::ranges;
+use crate::error::{Result};
+use crate::imp::io::{IWriteBytes};
+use crate::imp::codes;
+use crate::imp::ranges;
 use std::cmp;
 
 #[derive(Clone, Debug)]

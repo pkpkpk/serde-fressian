@@ -1,4 +1,4 @@
-use error::{Error, ErrorCode, Result};
+use crate::error::{Error, ErrorCode, Result};
 use std::cmp;
 
 pub struct ByteReader<'a> {

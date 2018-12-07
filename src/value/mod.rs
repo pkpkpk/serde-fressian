@@ -3,18 +3,16 @@ use serde::ser::Serialize;
 use serde_bytes::ByteBuf;
 use ordered_float::OrderedFloat;
 
-// use error::{Error};
-use inst::{INST};
-use uuid::{UUID};
-use uri::{URI};
-use regex::{REGEX};
-use sym::{SYM};
-use key::{KEY};
-use typed_arrays::*;
-use set::{SET};
+use crate::inst::{INST};
+use crate::uuid::{UUID};
+use crate::uri::{URI};
+use crate::regex::{REGEX};
+use crate::sym::{SYM};
+use crate::key::{KEY};
+use crate::typed_arrays::*;
+use crate::set::{SET};
 
 mod de;
-// mod index;
 
 /// Represents a Fressian value
 #[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
