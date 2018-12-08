@@ -1,44 +1,64 @@
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use serde::ser::{Serialize};
 
-use std::collections::{HashMap};
-use crate::value::{Value};
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new(); //this should be parameterized
+    t.hash(&mut s);
+    s.finish()
+}
 
 pub struct Cache {
-    index: u8,
-    store: HashMap<Value,u8>
+    hashes: Vec<u64>
 }
 
 impl Cache {
     pub fn new() -> Self {
         Cache {
-            index: 0,
-            store: HashMap::<Value,u8>::new()
-        }
-    }
-
-    pub fn get(&self, val: &Value) -> Option<u8> {
-        self.store.get(val).map(|code: &u8| *code )
-    }
-
-    // returns Some(index) if already interned, None if inserted
-    pub fn put(&mut self, val: Value) -> Option<u8> {
-        if self.store.contains_key(&val) {
-            self.get(&val)
-        } else {
-            let index = self.index;
-            match self.store.insert(val, index) {
-                Some(_) => {
-                    None //should never get here
-                }
-                None => {
-                    self.index += 1;
-                    None
-                }
-            }
+            hashes: Vec::new()
         }
     }
 
     pub fn reset(&mut self) {
-        self.index = 0;
-        self.store.clear()
+        self.hashes.clear()
+    }
+
+    #[inline]
+    fn test_hash(&self, h: u64) -> Option<usize> {
+        self.hashes.iter().position(|h_i| *h_i == h)
+    }
+
+    pub fn intern<T>(&mut self, object: &T) -> Option<usize>
+        where T: Serialize + Hash,
+    {
+
+        let h = calculate_hash(object);
+
+        let test: Option<usize> = self.test_hash(h);
+
+        if test.is_some() {
+            return test
+        } else {
+            self.hashes.push(h);
+            return None
+        }
     }
 }
+
+#[test]
+fn cache_test(){
+
+    let mut cache = Cache::new();
+
+    let v0 = vec![1,2,3];
+    let v1 = "foo";
+
+    assert_eq!(None, cache.intern(&v0));
+    assert_eq!(None, cache.intern(&v1));
+    assert_eq!(Some(0), cache.intern(&v0));
+    assert_eq!(Some(1), cache.intern(&v1));
+    cache.reset();
+    assert_eq!(None, cache.intern(&v0));
+    assert_eq!(None, cache.intern(&v1));
+}
+

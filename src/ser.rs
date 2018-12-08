@@ -6,7 +6,8 @@ use crate::imp::io::{ByteWriter, IWriteBytes};
 use crate::imp::ranges;
 use crate::imp::cache::{Cache};
 use crate::error::{Error, ErrorCode, Result};
-use crate::value::{Value};
+use std::hash::{Hash};
+use ordered_float::OrderedFloat;
 
 pub struct Serializer<W> {
     writer: W,
@@ -84,20 +85,17 @@ where
     W: IWriteBytes,
 {
 
-    // this will work for narrow fressian types, need to expand Value
-    // to handle into_iter, other maps, sets, etc
-    pub fn caching_serialize<O>(&mut self, object: O) -> Result<()>
-        where O: Into<Value> + Serialize + Clone,
+    pub fn caching_serialize<T>(&mut self, object: T) -> Result<()>
+        where T: Serialize + Hash,
     {
-        let val: Value = Value::from(object.clone().into());
-
-        match self.cache.put(val) {
+        match self.cache.intern(&object)
+        {
             Some(code) => {
-                if code < ranges::PRIORITY_CACHE_PACKED_END {
-                    self.write_code( code + codes::PRIORITY_CACHE_PACKED_START )
+                if (code as u8) < ranges::PRIORITY_CACHE_PACKED_END {
+                    self.write_code( (code as u8) + codes::PRIORITY_CACHE_PACKED_START )
                 } else {
                     self.write_code(codes::GET_PRIORITY_CACHE)?;
-                    self.write_int(code as i64)
+                    self.write_int(code as i64) // client tries i32?
                 }
             }
             None => {
@@ -862,20 +860,24 @@ where
     fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {self.ser.serialize_none()}
 
     #[inline]
-    fn serialize_f32(self, _value: f32) -> Result<()> {
-        if (_value == 0.0) | (_value == 1.0) {
-            _value.serialize(self.ser)
+    fn serialize_f32(self, value: f32) -> Result<()> {
+        let value = OrderedFloat::from(value);
+
+        if (value == OrderedFloat::from(0.0)) | (value == OrderedFloat::from(1.0)) {
+            value.serialize(self.ser)
         } else {
-            self.ser.caching_serialize(_value)
+            self.ser.caching_serialize(value)
         }
     }
 
     #[inline]
-    fn serialize_f64(self, _value: f64) -> Result<()> {
-        if (_value == 0.0) | (_value == 1.0) {
-            _value.serialize(self.ser)
+    fn serialize_f64(self, value: f64) -> Result<()> {
+        let value = OrderedFloat::from(value);
+
+        if (value == OrderedFloat::from(0.0)) | (value == OrderedFloat::from(1.0)) {
+            value.serialize(self.ser)
         } else {
-            self.ser.caching_serialize(_value)
+            self.ser.caching_serialize(value)
         }
     }
 
