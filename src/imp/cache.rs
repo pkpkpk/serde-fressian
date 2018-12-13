@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use serde::ser::{Serialize};
 
 pub trait ICache {
+    fn get<T: Serialize + Hash + PartialEq>(&self, object: &T) -> Option<usize>;
     fn intern<T: Serialize + Hash + PartialEq>(&mut self, object: &T) -> Option<usize>; //u32?
     fn reset(&mut self) -> ();
 }
@@ -34,6 +35,13 @@ impl Cache {
 impl ICache for Cache {
     fn reset(&mut self) {
         self.hashes.clear()
+    }
+
+    fn get<T>(&self, object: &T) -> Option<usize>
+        where T: Serialize + Hash + PartialEq,
+    {
+        let h = default_hash(object);
+        self.test_hash(h)
     }
 
     fn intern<T>(&mut self, object: &T) -> Option<usize>
