@@ -4,43 +4,45 @@ use crate::imp::rawoutput::{RawOutput};
 use crate::imp::codes;
 use crate::imp::io::{ByteWriter, IWriteBytes};
 use crate::imp::ranges;
-use crate::imp::cache::{Cache};
+use crate::imp::cache::{Cache, ICache};
 use crate::error::{Error, ErrorCode, Result};
 use std::hash::{Hash};
 use ordered_float::OrderedFloat;
 
-pub struct Serializer<W> {
+pub struct Serializer<W, C: ICache> {
     writer: W,
-    cache: Cache,
+    cache: C,
 }
 
-fn error<W,T>(ser: &Serializer<W>, reason: ErrorCode) -> Result<T>
-    where W: IWriteBytes
+fn error<W,C,T>(ser: &Serializer<W,C>, reason: ErrorCode) -> Result<T>
+    where W: IWriteBytes,
+          C: ICache
 {
     let position: usize = ser.writer.get_bytes_written();
     Err(Error::syntax(reason, position))
 }
 
-impl<W> Serializer<W>
-where
-    W: IWriteBytes,
+impl<W,C> Serializer<W,C>
+    where
+        W: IWriteBytes,
+        C: ICache,
 {
-    pub fn new(writer: W) -> Self {
+    pub fn new(writer: W, cache: C) -> Self {
         Serializer {
             writer: writer,
-            cache: Cache::new(),
+            cache: cache,
         }
-    }
-}
-
-impl Serializer<ByteWriter<Vec<u8>>> {
-    pub fn from_vec(v: Vec<u8>) -> Self {
-        Serializer::new(ByteWriter::from_vec(v))
     }
 
     pub fn reset(&mut self) {
         self.writer.reset();
         self.cache.reset();
+    }
+}
+
+impl Serializer<ByteWriter<Vec<u8>>, Cache> {
+    pub fn from_vec(v: Vec<u8>) -> Self {
+        Serializer::new(ByteWriter::from_vec(v), Cache::new())
     }
 
     pub fn get_ref(&self) -> &Vec<u8> {
@@ -80,13 +82,14 @@ where
     Ok(serializer.into_inner())
 }
 
-impl<W> Serializer<W>
+impl<W,C> Serializer<W,C>
 where
     W: IWriteBytes,
+    C: ICache,
 {
 
     pub fn caching_serialize<T>(&mut self, object: T) -> Result<()>
-        where T: Serialize + Hash,
+        where T: Serialize + Hash + PartialEq,
     {
         match self.cache.intern(&object)
         {
@@ -239,19 +242,20 @@ where
     }
 }
 
-impl<'a, W> ser::Serializer for &'a mut Serializer<W>
+impl<'a, W, C> ser::Serializer for &'a mut Serializer<W,C>
 where
     W: IWriteBytes,
+    C: ICache,
 {
     type Ok = ();
     type Error = Error;
-    type SerializeSeq = Compound<'a, W>;
-    type SerializeTuple = Compound<'a, W>;
-    type SerializeTupleStruct = Compound<'a, W>;
-    type SerializeTupleVariant = Compound<'a, W>;
-    type SerializeMap = Compound<'a, W>;
-    type SerializeStruct = Compound<'a, W>;
-    type SerializeStructVariant = Compound<'a, W>;
+    type SerializeSeq = Compound<'a, W,C>;
+    type SerializeTuple = Compound<'a, W,C>;
+    type SerializeTupleStruct = Compound<'a, W,C>;
+    type SerializeTupleVariant = Compound<'a, W,C>;
+    type SerializeMap = Compound<'a, W,C>;
+    type SerializeStruct = Compound<'a, W,C>;
+    type SerializeStructVariant = Compound<'a, W,C>;
 
 
     fn serialize_bool(self, v: bool) -> Result<()> { self.write_boolean(v) }
@@ -486,22 +490,25 @@ pub enum ListType {
     Open
 }
 
-pub enum Compound<'a, W: 'a> {
+pub enum Compound<'a, W: 'a, C>
+    where C: ICache,
+{
     LIST {
-        ser: &'a mut Serializer<W>,
+        ser: &'a mut Serializer<W,C>,
         cache_elements: bool,
         list_type: ListType
     },
     MAP {
-        ser: &'a mut Serializer<W>,
+        ser: &'a mut Serializer<W,C>,
         // cache_keys: bool,
         list_type: ListType
     }
 }
 
-impl<'a,W> ser::SerializeSeq for Compound<'a,W>
+impl<'a,W,C> ser::SerializeSeq for Compound<'a,W,C>
 where
     W: IWriteBytes,
+    C: ICache
 {
     type Ok = ();
     type Error = Error;
@@ -542,9 +549,10 @@ where
     }
 }
 
-impl<'a,W> ser::SerializeTuple for Compound<'a,W>
+impl<'a,W,C> ser::SerializeTuple for Compound<'a,W,C>
 where
     W: IWriteBytes,
+    C: ICache
 {
     type Ok = ();
     type Error = Error;
@@ -558,9 +566,10 @@ where
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a,W> ser::SerializeTupleStruct for Compound<'a,W>
+impl<'a,W,C> ser::SerializeTupleStruct for Compound<'a,W,C>
 where
     W: IWriteBytes,
+    C: ICache
 {
     type Ok = ();
     type Error = Error;
@@ -574,9 +583,10 @@ where
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a,W> ser::SerializeTupleVariant for Compound<'a,W>
+impl<'a,W,C> ser::SerializeTupleVariant for Compound<'a,W,C>
 where
     W: IWriteBytes,
+    C: ICache,
 {
     type Ok = ();
     type Error = Error;
@@ -590,9 +600,10 @@ where
     fn end(self) -> Result<()> { Ok(()) }
 }
 
-impl<'a,W> ser::SerializeMap for Compound<'a,W>
+impl<'a,W,C> ser::SerializeMap for Compound<'a,W,C>
 where
     W: IWriteBytes,
+    C: ICache,
 {
     type Ok = ();
     type Error = Error;
@@ -612,9 +623,10 @@ where
     fn end(self) -> Result<()> { ser::SerializeSeq::end(self) }
 }
 
-impl<'a,W> ser::SerializeStruct for Compound<'a,W>
+impl<'a,W,C> ser::SerializeStruct for Compound<'a,W,C>
 where
     W: IWriteBytes,
+    C: ICache,
 {
     type Ok = ();
     type Error = Error;
@@ -629,9 +641,10 @@ where
     fn end(self) -> Result<()> { ser::SerializeSeq::end(self) }
 }
 
-impl<'a,W> ser::SerializeStructVariant for Compound<'a,W>
+impl<'a,W,C> ser::SerializeStructVariant for Compound<'a,W,C>
 where
     W: IWriteBytes,
+    C: ICache,
 {
     type Ok = ();
     type Error = Error;
@@ -651,17 +664,22 @@ where
 /////////////////////////////////////////////////////////////////////////////
 
 // naive no packing seq writer for typed arrays
-struct TASerializer<'a, W: 'a>{
-    ser: &'a mut Serializer<W>
+struct TASerializer<'a, W: 'a, C>
+    where C: ICache,
+{
+    ser: &'a mut Serializer<W,C>
 }
 
-pub struct TACompound<'a, W: 'a> {
-    ser: &'a mut Serializer<W>,
+pub struct TACompound<'a, W: 'a, C>
+    where C: ICache,
+{
+    ser: &'a mut Serializer<W,C>,
 }
 
-impl<'a,W> ser::SerializeSeq for TACompound<'a, W>
+impl<'a,W,C> ser::SerializeSeq for TACompound<'a, W,C>
 where
     W: IWriteBytes,
+    C: ICache
 {
     type Ok = ();
     type Error = Error;
@@ -676,14 +694,15 @@ where
 }
 
 
-impl<'a, W> ser::Serializer for TASerializer<'a, W>
+impl<'a, W,C> ser::Serializer for TASerializer<'a, W,C>
 where
     W: IWriteBytes,
+    C: ICache
 {
     type Ok = ();
     type Error = Error;
 
-    type SerializeSeq = TACompound<'a, W>;
+    type SerializeSeq = TACompound<'a, W,C>;
 
 
     #[inline]
@@ -827,13 +846,16 @@ where
 /////////////////////////////////////////////////////////////////////////////
 
 
-struct CachingSerializer<'a, W: 'a>{
-    ser: &'a mut Serializer<W>
+struct CachingSerializer<'a, W: 'a, C>
+    where C: ICache,
+{
+    ser: &'a mut Serializer<W, C>
 }
 
-impl<'a, W> ser::Serializer for CachingSerializer<'a, W>
+impl<'a, W,C> ser::Serializer for CachingSerializer<'a, W,C>
 where
     W: IWriteBytes,
+    C: ICache
 {
     type Ok = ();
     type Error = Error;

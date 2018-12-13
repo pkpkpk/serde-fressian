@@ -2,11 +2,17 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use serde::ser::{Serialize};
 
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
+pub trait ICache {
+    fn intern<T: Serialize + Hash + PartialEq>(&mut self, object: &T) -> Option<usize>; //u32?
+    fn reset(&mut self) -> ();
+}
+
+fn default_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new(); //this should be parameterized
     t.hash(&mut s);
     s.finish()
 }
+
 
 pub struct Cache {
     hashes: Vec<u64>
@@ -19,20 +25,21 @@ impl Cache {
         }
     }
 
-    pub fn reset(&mut self) {
-        self.hashes.clear()
-    }
-
     #[inline]
     fn test_hash(&self, h: u64) -> Option<usize> {
         self.hashes.iter().position(|h_i| *h_i == h)
     }
+}
 
-    pub fn intern<T>(&mut self, object: &T) -> Option<usize>
-        where T: Serialize + Hash,
+impl ICache for Cache {
+    fn reset(&mut self) {
+        self.hashes.clear()
+    }
+
+    fn intern<T>(&mut self, object: &T) -> Option<usize>
+        where T: Serialize + Hash + PartialEq,
     {
-
-        let h = calculate_hash(object);
+        let h = default_hash(object);
 
         let test: Option<usize> = self.test_hash(h);
 
