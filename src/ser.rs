@@ -14,69 +14,87 @@ pub struct Serializer<W, C: ICache> {
     cache: C,
 }
 
-fn error<W,C,T>(ser: &Serializer<W,C>, reason: ErrorCode) -> Result<T>
-    where W: IWriteBytes,
-          C: ICache
-{
-    let position: usize = ser.writer.get_bytes_written();
-    Err(Error::syntax(reason, position))
-}
-
 impl<W,C> Serializer<W,C>
     where
         W: IWriteBytes,
         C: ICache,
 {
-    pub fn new(writer: W, cache: C) -> Self {
-        Serializer {
-            writer: writer,
-            cache: cache,
-        }
-    }
-
     pub fn reset(&mut self) {
         self.writer.reset();
         self.cache.reset();
     }
 }
 
-impl Serializer<ByteWriter<Vec<u8>>, Cache> {
-    pub fn from_vec(v: Vec<u8>) -> Self {
-        Serializer::new(ByteWriter::from_vec(v), Cache::new())
+impl<C> Serializer<ByteWriter<Vec<u8>>, C>
+    where C: ICache,
+{
+    /// create a serializer with a custom cache
+    pub fn with_cache(cache: C) -> Self {
+        Serializer {
+            writer: ByteWriter::from_vec(Vec::<u8>::new()),
+            cache: cache,
+        }
     }
 
+    /// borrow a reference to the serializer's underlying Vec<u8>
     pub fn get_ref(&self) -> &Vec<u8> {
         self.writer.get_ref()
     }
 
+    /// clone the serializer's underlying Vec<u8>
     pub fn to_vec(&mut self) -> Vec<u8> {
         self.writer.to_vec()
     }
 
+    /// take ownership of the serializer's underlying Vec<u8>
     pub fn into_inner(self) -> Vec<u8> {
         self.writer.into_inner()
     }
 }
 
-// write to vec<u8>
+impl Serializer<ByteWriter<Vec<u8>>, Cache> {
+    pub fn new() -> Self {
+        Serializer {
+            writer: ByteWriter::from_vec(Vec::<u8>::new()),
+            cache: Cache::new(),
+        }
+    }
+
+    pub fn from_vec(v: Vec<u8>) -> Self {
+        Serializer {
+            writer: ByteWriter::from_vec(v),
+            cache: Cache::new(),
+        }
+    }
+}
+
+/// serialize value to Vec<u8>
 pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
 {
-    let buf = Vec::with_capacity(100);
-    let mut serializer = Serializer::from_vec(buf);
-
+    let mut serializer = Serializer::new();
     value.serialize(&mut serializer)?;
     Ok(serializer.into_inner())
 }
 
-// write to vec<u8> with footer
+/// serialize value to Vec<u8> with provided cache
+pub fn to_vec_cache<T,C>(value: &T, cache: C) -> Result<Vec<u8>>
+where
+    T: Serialize,
+    C: ICache
+{
+    let mut serializer = Serializer::with_cache(cache);
+    value.serialize(&mut serializer)?;
+    Ok(serializer.into_inner())
+}
+
+/// serialize value to Vec<u8> with footer
 pub fn to_vec_footer<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
 {
-    let buf = Vec::with_capacity(100);
-    let mut serializer = Serializer::from_vec(buf);
+    let mut serializer = Serializer::new();
     value.serialize(&mut serializer)?;
     serializer.write_footer()?;
     Ok(serializer.into_inner())
@@ -240,6 +258,14 @@ where
         self.write_code(codes::SET)?;
         self.write_list(iter)
     }
+}
+
+fn error<W,C,T>(ser: &Serializer<W,C>, reason: ErrorCode) -> Result<T>
+    where W: IWriteBytes,
+          C: ICache
+{
+    let position: usize = ser.writer.get_bytes_written();
+    Err(Error::syntax(reason, position))
 }
 
 impl<'a, W, C> ser::Serializer for &'a mut Serializer<W,C>
