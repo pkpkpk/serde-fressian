@@ -14,8 +14,9 @@ repository = "https://github.com/pkpkpk/serde-fressian"
 edition = "2018"
 
 [dependencies]
-serde = "1.0.71"
-serde_derive = "1.0.70"
+serde = "1.0.82"
+serde_derive = "1.0.82"
+
 serde_bytes = "0.10.4"
 itertools = "0.7.3"
 byteorder = "1.2.3"
