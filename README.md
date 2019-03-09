@@ -4,6 +4,57 @@ Fressian is a self-describing binary serialization format developed for clojure.
 [Latest Version]: https://img.shields.io/crates/v/serde-fressian.svg
 [crates.io]: https://crates.io/crates/serde-fressian
 
+<hr>
+
+## UPDATE 2019-03-09
+
+This project is hammocked.
+
+In its current state, this is an incomplete implementation of fressian. In addition to a couple missing types, part of the fressian protocol is *caching*, where you can hand off some data to serializer with a flag, and every subsequent time the serializer sees an *"equal"* object, it is written as a few bytes at most. As you can imagine for wasm consumers, this is a highly attractive feature, especially if you can agree on a cache table ahead of time and never pay the full cost of marshalling expensive data. This is the most important new feature moving forward, and will require some work.
+
+#### Wishlist
+
++ simple interface for caching
++ custom user caches via traits
+  - choose your hash algorithm, hard code behavior, etc
++ zero-copy, no-move cache-testing
+  - this may be impossible with heterogeneous types
++ enable `&'static mut` caches
+  - should be able to ship a lazy-static global cache & recycle its use
+  - big perf win for wasm
++ `&mut` byte buffers
+  - in single thread ctx, no reason to reallocate a buffer for every serializer instance
+  - multi-threaded can pool
++ automatic caching via attribute
+  - serialize impls are pretty rigid. Possibly can wrap them with a Cache trait and ship default impls
++ fill out type support
+
+#### Problems
+
+1. equivalence between objects
+
+This is easy in JVM & JS because everything is an object, we can use runtime reflection, and we can rely on clojure to do the work for us. For rust though, objects of different types will cannot be compared, and serde will not let us further constrain types with traits (Hash etc) for use in Serializers.
+
+2. serde wants to be stateless
+
+Serde's `Serialize` want to treat every object the same, and you cannot introduce new trait restrictions on serializable types. Short of thread-local global variables, you cannot write a `Serialize` impl that accesses state somewhere to conditionally change serialization strategies.
+
+#### Solutions
+
++ ~~adhoc reflection, serializing trait objects~~
+  - tried & failed :-(
++ [serde-state](https://docs.rs/serde_state/0.3.0/serde_state/)?
++ enable caching only for types that can be converted to a common `Value` enum, but with the constraint of using a dedicated serialization api for the types you intend to cache
+  - This was the original impl for caching. I am going to revert it back
++ completely wrap serde with a set of serialization traits designed with caching in mind
+  - this is probably the most robust way forward, but will break from serde idioms
+
+#### Feedback
+
+Am I overlooking something?
+
+<hr>
+
 ## wasm⥪fressian⥭cljs
 
 When compiled for WebAssembly, serde-fressian can be used to convey rich values to and from clojurescript.
